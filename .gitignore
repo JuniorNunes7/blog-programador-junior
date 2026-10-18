@@ -1,0 +1,4 @@
+/vendor/
+/.phpunit.cache/
+/storage/article-index.json
+/.DS_Store
