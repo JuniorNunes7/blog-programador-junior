@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Blog\Content;
+namespace Blog\Content\Model;
 
 use DateTimeImmutable;
 

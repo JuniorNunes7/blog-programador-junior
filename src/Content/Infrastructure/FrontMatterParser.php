@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Blog\Content;
+namespace Blog\Content\Infrastructure;
 
+use Blog\Content\Errors\ContentException;
+use Blog\Content\Model\Article;
+use Blog\Content\Model\ArticleMetadata;
 use DateTimeImmutable;
 
 final class FrontMatterParser
@@ -15,7 +18,9 @@ final class FrontMatterParser
         $this->assertSlug($slug);
 
         if (preg_match('/\A---\R(?<frontMatter>.*?)\R---\R?(?<markdown>.*)\z/s', $document, $matches) !== 1) {
-            throw new ContentException(sprintf('O artigo "%s" precisa começar com front matter YAML delimitado por ---.', $slug));
+            throw new ContentException(
+                sprintf('O artigo "%s" precisa começar com front matter YAML delimitado por ---.', $slug),
+            );
         }
 
         $frontMatter = $this->parseYamlSubset($matches['frontMatter']);
@@ -24,8 +29,14 @@ final class FrontMatterParser
         $date = DateTimeImmutable::createFromFormat('!Y-m-d', $frontMatter['date']);
         $errors = DateTimeImmutable::getLastErrors();
 
-        if ($date === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) || $date->format('Y-m-d') !== $frontMatter['date']) {
-            throw new ContentException(sprintf('O campo "date" do artigo "%s" deve usar o formato YYYY-MM-DD.', $slug));
+        $isInvalidDate = $date === false
+            || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))
+            || $date->format('Y-m-d') !== $frontMatter['date'];
+
+        if ($isInvalidDate) {
+            throw new ContentException(
+                sprintf('O campo "date" do artigo "%s" deve usar o formato YYYY-MM-DD.', $slug),
+            );
         }
 
         return new Article(
@@ -83,7 +94,9 @@ final class FrontMatterParser
     {
         foreach (self::REQUIRED_FIELDS as $field) {
             if (!array_key_exists($field, $frontMatter)) {
-                throw new ContentException(sprintf('O artigo "%s" não possui o campo obrigatório "%s".', $slug, $field));
+                throw new ContentException(
+                    sprintf('O artigo "%s" não possui o campo obrigatório "%s".', $slug, $field),
+                );
             }
 
             $value = $frontMatter[$field];
@@ -91,7 +104,11 @@ final class FrontMatterParser
                 continue;
             }
 
-            if (is_array($value) && $value !== [] && array_all($value, static fn (string $item): bool => trim($item) !== '')) {
+            if (
+                is_array($value)
+                && $value !== []
+                && array_all($value, static fn (string $item): bool => trim($item) !== '')
+            ) {
                 continue;
             }
 
@@ -120,7 +137,10 @@ final class FrontMatterParser
 
     private function unquote(string $value): string
     {
-        if ((str_starts_with($value, '"') && str_ends_with($value, '"')) || (str_starts_with($value, "'") && str_ends_with($value, "'"))) {
+        $isDoubleQuoted = str_starts_with($value, '"') && str_ends_with($value, '"');
+        $isSingleQuoted = str_starts_with($value, "'") && str_ends_with($value, "'");
+
+        if ($isDoubleQuoted || $isSingleQuoted) {
             return substr($value, 1, -1);
         }
 

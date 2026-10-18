@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Blog\Content;
+namespace Blog\Content\Infrastructure;
 
+use Blog\Content\Contract\ArticleRepository;
+use Blog\Content\Errors\ContentException;
+use Blog\Content\Model\Article;
 use FilesystemIterator;
 
-final readonly class ArticleRepository
+final readonly class MarkdownArticleRepository implements ArticleRepository
 {
     public function __construct(
         private string $articlesDirectory,
@@ -39,7 +42,12 @@ final readonly class ArticleRepository
             $articles[] = $this->parser->parse($slug, $contents);
         }
 
-        usort($articles, static fn (Article $first, Article $second): int => [$second->metadata->publishedAt->format('Y-m-d'), $first->metadata->slug] <=> [$first->metadata->publishedAt->format('Y-m-d'), $second->metadata->slug]);
+        usort($articles, static function (Article $first, Article $second): int {
+            $firstArticlePosition = [$first->metadata->publishedAt->format('Y-m-d'), $first->metadata->slug];
+            $secondArticlePosition = [$second->metadata->publishedAt->format('Y-m-d'), $second->metadata->slug];
+
+            return $secondArticlePosition <=> $firstArticlePosition;
+        });
 
         return $articles;
     }

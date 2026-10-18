@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Content;
 
-use Blog\Content\ArticleIndexBuilder;
-use Blog\Content\ArticleRepository;
-use Blog\Content\FrontMatterParser;
+use Blog\Content\Index\ArticleIndexBuilder;
+use Blog\Content\Index\ArticleIndexWriter;
+use Blog\Content\Infrastructure\FrontMatterParser;
+use Blog\Content\Infrastructure\MarkdownArticleRepository;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -40,20 +41,22 @@ final class ArticleIndexBuilderTest extends TestCase
 
     public function testItBuildsAnIndexOrderedByMostRecentArticle(): void
     {
-        $builder = new ArticleIndexBuilder(new ArticleRepository($this->directory, new FrontMatterParser()));
+        $builder = new ArticleIndexBuilder(new MarkdownArticleRepository($this->directory, new FrontMatterParser()));
         $index = $builder->build();
 
-        self::assertSame(['segundo', 'primeiro'], array_column($index['articles'], 'slug'));
+        self::assertSame(['segundo', 'primeiro'], array_column($index->articles, 'slug'));
     }
 
     public function testItWritesValidJsonAtomically(): void
     {
-        $builder = new ArticleIndexBuilder(new ArticleRepository($this->directory, new FrontMatterParser()));
+        $builder = new ArticleIndexBuilder(new MarkdownArticleRepository($this->directory, new FrontMatterParser()));
         $destination = $this->directory . '/nested/article-index.json';
-        $builder->write($destination, $builder->build());
+        (new ArticleIndexWriter())->write($destination, $builder->build());
 
         self::assertFileExists($destination);
-        self::assertSame('segundo', json_decode((string) file_get_contents($destination), true, flags: JSON_THROW_ON_ERROR)['articles'][0]['slug']);
+        $index = json_decode((string) file_get_contents($destination), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame('segundo', $index['articles'][0]['slug']);
     }
 
     private function article(string $title, string $date): string
