@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Blog\Web;
 
+use Blog\Content\ArticleMetadata;
 use Blog\Content\ArticleRepository;
 use League\CommonMark\CommonMarkConverter;
 
@@ -36,6 +37,18 @@ final readonly class BlogApplication
 
         if (preg_match('#^/artigos/(?<slug>[a-z0-9]+(?:-[a-z0-9]+)*)$#', $path, $matches) === 1) {
             return $this->article($matches['slug']);
+        }
+
+        if ($path === '/sitemap.xml') {
+            return $this->sitemap();
+        }
+
+        if ($path === '/feed.xml') {
+            return $this->feed();
+        }
+
+        if ($path === '/robots.txt') {
+            return $this->robots();
         }
 
         if (preg_match('#^/tags/(?<tag>[a-z0-9]+(?:-[a-z0-9]+)*)(?:/pagina/(?<page>[1-9][0-9]*))?$#', $path, $matches) === 1) {
@@ -79,7 +92,9 @@ final readonly class BlogApplication
 
         $content .= $this->pagination($page, $totalPages, $basePath);
 
-        return new Response(200, $this->layout($heading, $content));
+        $path = $page === 1 ? $basePath : $this->pageUrl($basePath, $page);
+
+        return new Response(200, $this->layout($heading, $this->site['description'], $content, $path));
     }
 
     private function article(string $slug): Response
@@ -100,14 +115,56 @@ final readonly class BlogApplication
             $this->markdown->convert($article->markdown)->getContent(),
         );
 
-        return new Response(200, $this->layout($article->metadata->title, $content));
+        $headers = ['Content-Type' => 'text/html; charset=UTF-8', 'Cache-Control' => 'public, max-age=300'];
+        $modifiedAt = $this->articles->modifiedAt($slug);
+        if ($modifiedAt !== null) {
+            $headers['Last-Modified'] = gmdate('D, d M Y H:i:s', $modifiedAt) . ' GMT';
+            $headers['ETag'] = '"' . sha1($article->markdown) . '"';
+        }
+
+        return new Response(200, $this->layout($article->metadata->title, $article->metadata->description, $content, '/artigos/' . $slug, $article->metadata), $headers);
     }
 
     private function notFound(): Response
     {
         $content = '<section class="not-found"><p class="eyebrow">404</p><h1>Esta página não existe.</h1><p>Talvez o artigo tenha mudado de endereço ou ainda não tenha sido publicado.</p><a class="button" href="/">Voltar para os artigos</a></section>';
 
-        return new Response(404, $this->layout('Página não encontrada', $content));
+        return new Response(404, $this->layout('Página não encontrada', 'O endereço solicitado não está disponível.', $content, '/404'));
+    }
+
+    private function sitemap(): Response
+    {
+        $urls = [sprintf('<url><loc>%s</loc></url>', $this->xml($this->absoluteUrl('/')))];
+        foreach ($this->index->articles() as $article) {
+            $urls[] = sprintf('<url><loc>%s</loc><lastmod>%s</lastmod></url>', $this->xml($this->absoluteUrl('/artigos/' . $article['slug'])), $this->xml($article['date']));
+        }
+        foreach (array_keys($this->index->tags()) as $tag) {
+            $urls[] = sprintf('<url><loc>%s</loc></url>', $this->xml($this->absoluteUrl('/tags/' . $tag)));
+        }
+
+        return new Response(200, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" . implode("\n", $urls) . "\n</urlset>\n", [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+
+    private function feed(): Response
+    {
+        $items = array_map(function (array $article): string {
+            $date = new \DateTimeImmutable($article['date'] . 'T00:00:00+00:00');
+            $url = $this->absoluteUrl('/artigos/' . $article['slug']);
+
+            return sprintf('<item><title>%s</title><link>%s</link><guid isPermaLink="true">%s</guid><description>%s</description><pubDate>%s</pubDate></item>', $this->xml($article['title']), $this->xml($url), $this->xml($url), $this->xml($article['description']), $date->format(DATE_RSS));
+        }, $this->index->articles());
+
+        $body = sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\"><channel><title>%s</title><link>%s</link><description>%s</description><language>pt-BR</language>%s</channel></rss>\n", $this->xml($this->site['name']), $this->xml($this->absoluteUrl('/')), $this->xml($this->site['description']), implode('', $items));
+
+        return new Response(200, $body, ['Content-Type' => 'application/rss+xml; charset=UTF-8', 'Cache-Control' => 'public, max-age=3600']);
+    }
+
+    private function robots(): Response
+    {
+        return new Response(200, "User-agent: *\nAllow: /\nSitemap: " . $this->absoluteUrl('/sitemap.xml') . "\n", ['Content-Type' => 'text/plain; charset=UTF-8', 'Cache-Control' => 'public, max-age=3600']);
     }
 
     /** @param array{slug: string, title: string, date: string, description: string, keywords: list<string>, tags: list<string>} $article */
@@ -152,10 +209,19 @@ final readonly class BlogApplication
         return $basePath === '/' ? '/pagina/' . $page : $basePath . '/pagina/' . $page;
     }
 
-    private function layout(string $title, string $content): string
+    private function layout(string $title, string $description, string $content, string $path, ?ArticleMetadata $article = null): string
     {
         $siteName = $this->escape($this->site['name']);
         $fullTitle = $this->escape($title . ' · ' . $this->site['name']);
+        $description = $this->escape($description);
+        $canonicalUrl = $this->absoluteUrl($path);
+        $schema = $article === null
+            ? ['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => $this->site['name'], 'url' => $this->absoluteUrl('/')]
+            : ['@context' => 'https://schema.org', '@type' => 'BlogPosting', 'headline' => $article->title, 'description' => $article->description, 'datePublished' => $article->publishedAt->format('Y-m-d'), 'dateModified' => $article->publishedAt->format('Y-m-d'), 'mainEntityOfPage' => $canonicalUrl, 'author' => ['@type' => 'Person', 'name' => $this->site['author']], 'publisher' => ['@type' => 'Person', 'name' => $this->site['author']]];
+        $schemaJson = htmlspecialchars((string) json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), ENT_NOQUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $keywords = $article === null ? '' : '<meta name="keywords" content="' . $this->escape(implode(', ', $article->keywords)) . '">';
+        $articleMeta = $article === null ? '' : '<meta property="article:published_time" content="' . $this->escape($article->publishedAt->format(DATE_ATOM)) . '">';
+        $ogType = $article === null ? 'website' : 'article';
 
         return <<<HTML
 <!doctype html>
@@ -164,6 +230,20 @@ final readonly class BlogApplication
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{$fullTitle}</title>
+    <meta name="description" content="{$description}">
+    {$keywords}
+    <link rel="canonical" href="{$this->escape($canonicalUrl)}">
+    <meta property="og:type" content="{$ogType}">
+    <meta property="og:locale" content="pt_BR">
+    <meta property="og:site_name" content="{$siteName}">
+    <meta property="og:title" content="{$fullTitle}">
+    <meta property="og:description" content="{$description}">
+    <meta property="og:url" content="{$this->escape($canonicalUrl)}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{$fullTitle}">
+    <meta name="twitter:description" content="{$description}">
+    {$articleMeta}
+    <script type="application/ld+json">{$schemaJson}</script>
     <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
@@ -179,5 +259,15 @@ HTML;
     private function escape(string $value): string
     {
         return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    private function xml(string $value): string
+    {
+        return htmlspecialchars($value, ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    private function absoluteUrl(string $path): string
+    {
+        return rtrim($this->site['base_url'], '/') . '/' . ltrim($path, '/');
     }
 }

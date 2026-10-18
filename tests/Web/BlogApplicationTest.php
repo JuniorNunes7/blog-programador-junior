@@ -63,6 +63,9 @@ MARKDOWN);
         self::assertSame(200, $response->status);
         self::assertStringContainsString('<h1>Olá</h1>', $response->body);
         self::assertStringNotContainsString('<script>', $response->body);
+        self::assertStringContainsString('<link rel="canonical" href="https://example.test/artigos/um-artigo">', $response->body);
+        self::assertStringContainsString('"@type":"BlogPosting"', $response->body);
+        self::assertArrayHasKey('Last-Modified', $response->headers);
     }
 
     public function testItListsArticlesByTagWithoutReadingTheArticleMarkdown(): void
@@ -78,6 +81,18 @@ MARKDOWN);
         $response = $this->application()->handle('GET', '/artigos/nao-existe');
 
         self::assertSame(404, $response->status);
+    }
+
+    public function testItGeneratesSitemapRssAndRobotsFromTheIndex(): void
+    {
+        $sitemap = $this->application()->handle('GET', '/sitemap.xml');
+        $feed = $this->application()->handle('GET', '/feed.xml');
+        $robots = $this->application()->handle('GET', '/robots.txt');
+
+        self::assertSame('application/xml; charset=UTF-8', $sitemap->headers['Content-Type']);
+        self::assertStringContainsString('<loc>https://example.test/artigos/um-artigo</loc>', $sitemap->body);
+        self::assertStringContainsString('<guid isPermaLink="true">https://example.test/artigos/um-artigo</guid>', $feed->body);
+        self::assertStringContainsString('Sitemap: https://example.test/sitemap.xml', $robots->body);
     }
 
     private function application(): BlogApplication
