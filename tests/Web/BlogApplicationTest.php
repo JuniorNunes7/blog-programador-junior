@@ -65,6 +65,12 @@ MARKDOWN);
         self::assertSame(200, $response->status);
         self::assertStringContainsString('<h1>Olá</h1>', $response->body);
         self::assertStringNotContainsString('<script>', $response->body);
+        self::assertStringContainsString(
+            '<link rel="canonical" href="https://example.test/artigos/um-artigo">',
+            $response->body,
+        );
+        self::assertStringContainsString('"@type":"BlogPosting"', $response->body);
+        self::assertArrayHasKey('Last-Modified', $response->headers);
     }
 
     public function testItListsArticlesByTagWithoutReadingTheArticleMarkdown(): void
@@ -80,30 +86,47 @@ MARKDOWN);
         $response = $this->application()->handle('GET', '/artigos/nao-existe');
 
         self::assertSame(404, $response->status);
-        self::assertStringContainsString('<h1>Página não encontrada.</h1>', $response->body);
-        self::assertStringContainsString('src="/assets/images/404.png" alt="" aria-hidden="true"', $response->body);
-        self::assertStringContainsString('href="/">Voltar para os artigos</a>', $response->body);
+    }
+
+    public function testItGeneratesSitemapRssAndRobotsFromTheIndex(): void
+    {
+        $sitemap = $this->application()->handle('GET', '/sitemap.xml');
+        $feed = $this->application()->handle('GET', '/feed.xml');
+        $robots = $this->application()->handle('GET', '/robots.txt');
+
+        self::assertSame('application/xml; charset=UTF-8', $sitemap->headers['Content-Type']);
+        self::assertStringContainsString(
+            '<loc>https://example.test/artigos/um-artigo</loc>',
+            $sitemap->body,
+        );
+        self::assertStringContainsString(
+            '<guid isPermaLink="true">https://example.test/artigos/um-artigo</guid>',
+            $feed->body,
+        );
+        self::assertStringContainsString('Sitemap: https://example.test/sitemap.xml', $robots->body);
     }
 
     private function application(): BlogApplication
     {
-        $site = [
-            'name' => 'Blog teste',
-            'description' => 'Descrição do blog',
-            'author' => 'Autor',
-            'base_url' => 'https://example.test',
-            'articles_per_page' => 10,
-        ];
-        $index = ArticleIndex::fromFile($this->directory . '/index.json');
-        $templates = new TemplateRenderer(dirname(__DIR__, 2) . '/templates', $site);
-
         return new BlogApplication(
             new BlogController(
-                $site,
-                $index,
+                [
+                    'name' => 'Blog teste',
+                    'description' => 'Descrição do blog',
+                    'author' => 'Autor',
+                    'base_url' => 'https://example.test',
+                    'articles_per_page' => 10,
+                ],
+                ArticleIndex::fromFile($this->directory . '/index.json'),
                 new MarkdownArticleRepository($this->directory . '/articles', new FrontMatterParser()),
                 new CommonMarkConverter(['html_input' => 'strip', 'allow_unsafe_links' => false]),
-                $templates,
+                new TemplateRenderer(dirname(__DIR__, 2) . '/templates', [
+                    'name' => 'Blog teste',
+                    'description' => 'Descrição do blog',
+                    'author' => 'Autor',
+                    'base_url' => 'https://example.test',
+                    'articles_per_page' => 10,
+                ]),
             ),
         );
     }

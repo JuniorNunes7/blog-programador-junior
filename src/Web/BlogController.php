@@ -50,15 +50,76 @@ final readonly class BlogController
             return $this->notFound();
         }
 
+        $headers = ['Content-Type' => 'text/html; charset=UTF-8', 'Cache-Control' => 'public, max-age=300'];
+        $modifiedAt = $this->articles->modifiedAt($slug);
+        if ($modifiedAt !== null) {
+            $headers['Last-Modified'] = gmdate('D, d M Y H:i:s', $modifiedAt) . ' GMT';
+            $headers['ETag'] = '"' . sha1($article->markdown) . '"';
+        }
+
         return new Response(200, $this->templates->page($article->metadata->title, 'pages/article', [
             'article' => $article,
             'articleHtml' => $this->markdown->convert($article->markdown)->getContent(),
-        ]));
+            'description' => $article->metadata->description,
+            'path' => '/artigos/' . $slug,
+        ]), $headers);
     }
 
     public function notFound(): Response
     {
         return new Response(404, $this->templates->page('Página não encontrada', 'pages/not-found'));
+    }
+
+    public function sitemap(): Response
+    {
+        $urls = [['url' => $this->absoluteUrl('/')]];
+        foreach ($this->index->articles() as $article) {
+            $urls[] = [
+                'url' => $this->absoluteUrl('/artigos/' . $article['slug']),
+                'lastModified' => $article['date'],
+            ];
+        }
+        foreach (array_keys($this->index->tags()) as $tag) {
+            $urls[] = ['url' => $this->absoluteUrl('/tags/' . $tag)];
+        }
+
+        return new Response(200, $this->templates->render('seo/sitemap', ['urls' => $urls]), [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+
+    public function feed(): Response
+    {
+        $items = array_map(function (array $article): array {
+            $date = new \DateTimeImmutable($article['date'] . 'T00:00:00+00:00');
+
+            return [
+                'title' => $article['title'],
+                'url' => $this->absoluteUrl('/artigos/' . $article['slug']),
+                'description' => $article['description'],
+                'publishedAt' => $date->format(DATE_RSS),
+            ];
+        }, $this->index->articles());
+
+        return new Response(200, $this->templates->render('seo/feed', [
+            'items' => $items,
+            'site' => $this->site,
+            'siteUrl' => $this->absoluteUrl('/'),
+        ]), [
+            'Content-Type' => 'application/rss+xml; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+
+    public function robots(): Response
+    {
+        return new Response(200, $this->templates->render('seo/robots', [
+            'sitemapUrl' => $this->absoluteUrl('/sitemap.xml'),
+        ]), [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
     }
 
     /** @param list<array{slug: string, title: string, date: string, description: string, keywords: list<string>, tags: list<string>}> $articles */
@@ -93,5 +154,10 @@ final readonly class BlogController
         }
 
         return $basePath === '/' ? '/pagina/' . $page : $basePath . '/pagina/' . $page;
+    }
+
+    private function absoluteUrl(string $path): string
+    {
+        return rtrim($this->site['base_url'], '/') . '/' . ltrim($path, '/');
     }
 }

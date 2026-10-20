@@ -12,4 +12,6 @@ interface ArticleRepository
     public function all(): array;
 
     public function find(string $slug): ?Article;
+
+    public function modifiedAt(string $slug): ?int;
 }

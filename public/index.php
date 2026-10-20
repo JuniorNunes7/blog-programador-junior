@@ -17,19 +17,16 @@ $root = dirname(__DIR__);
 $site = require $root . '/config/site.php';
 
 try {
-    $index = ArticleIndex::fromFile($root . '/storage/article-index.json');
-    $templates = new TemplateRenderer($root . '/templates', $site);
-
     $application = new BlogApplication(
         new BlogController(
             $site,
-            $index,
+            ArticleIndex::fromFile($root . '/storage/article-index.json'),
             new MarkdownArticleRepository($root . '/content/articles', new FrontMatterParser()),
             new CommonMarkConverter([
                 'html_input' => 'strip',
                 'allow_unsafe_links' => false,
             ]),
-            $templates,
+            new TemplateRenderer($root . '/templates', $site),
         ),
     );
 

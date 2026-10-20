@@ -70,4 +70,15 @@ final readonly class MarkdownArticleRepository implements ArticleRepository
 
         return $this->parser->parse($slug, $contents);
     }
+
+    public function modifiedAt(string $slug): ?int
+    {
+        if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug) !== 1) {
+            return null;
+        }
+
+        $modifiedAt = filemtime($this->articlesDirectory . DIRECTORY_SEPARATOR . $slug . '.md');
+
+        return $modifiedAt === false ? null : $modifiedAt;
+    }
 }

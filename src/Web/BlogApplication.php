@@ -31,6 +31,18 @@ final readonly class BlogApplication
             return $this->controller->article($matches['slug']);
         }
 
+        if ($path === '/sitemap.xml') {
+            return $this->controller->sitemap();
+        }
+
+        if ($path === '/feed.xml') {
+            return $this->controller->feed();
+        }
+
+        if ($path === '/robots.txt') {
+            return $this->controller->robots();
+        }
+
         $tagRoute = '#^/tags/(?<tag>[a-z0-9]+(?:-[a-z0-9]+)*)'
             . '(?:/pagina/(?<page>[1-9][0-9]*))?$#';
         if (preg_match($tagRoute, $path, $matches) === 1) {
