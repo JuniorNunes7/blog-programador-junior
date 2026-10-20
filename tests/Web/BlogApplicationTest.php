@@ -8,6 +8,8 @@ use Blog\Content\Infrastructure\FrontMatterParser;
 use Blog\Content\Infrastructure\MarkdownArticleRepository;
 use Blog\Web\ArticleIndex;
 use Blog\Web\BlogApplication;
+use Blog\Web\BlogController;
+use Blog\Web\TemplateRenderer;
 use League\CommonMark\CommonMarkConverter;
 use PHPUnit\Framework\TestCase;
 
@@ -78,21 +80,31 @@ MARKDOWN);
         $response = $this->application()->handle('GET', '/artigos/nao-existe');
 
         self::assertSame(404, $response->status);
+        self::assertStringContainsString('<h1>Página não encontrada.</h1>', $response->body);
+        self::assertStringContainsString('src="/assets/images/404.png" alt="" aria-hidden="true"', $response->body);
+        self::assertStringContainsString('href="/">Voltar para os artigos</a>', $response->body);
     }
 
     private function application(): BlogApplication
     {
+        $site = [
+            'name' => 'Blog teste',
+            'description' => 'Descrição do blog',
+            'author' => 'Autor',
+            'base_url' => 'https://example.test',
+            'articles_per_page' => 10,
+        ];
+        $index = ArticleIndex::fromFile($this->directory . '/index.json');
+        $templates = new TemplateRenderer(dirname(__DIR__, 2) . '/templates', $site);
+
         return new BlogApplication(
-            [
-                'name' => 'Blog teste',
-                'description' => 'Descrição do blog',
-                'author' => 'Autor',
-                'base_url' => 'https://example.test',
-                'articles_per_page' => 10,
-            ],
-            ArticleIndex::fromFile($this->directory . '/index.json'),
-            new MarkdownArticleRepository($this->directory . '/articles', new FrontMatterParser()),
-            new CommonMarkConverter(['html_input' => 'strip', 'allow_unsafe_links' => false]),
+            new BlogController(
+                $site,
+                $index,
+                new MarkdownArticleRepository($this->directory . '/articles', new FrontMatterParser()),
+                new CommonMarkConverter(['html_input' => 'strip', 'allow_unsafe_links' => false]),
+                $templates,
+            ),
         );
     }
 }
