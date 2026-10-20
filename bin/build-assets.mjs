@@ -36,7 +36,8 @@ for (const width of [480, 800]) {
     await sharp(source('404-mobile.png')).resize(width, width, { fit: 'cover' }).webp({ quality: 78 }).toFile(output(`images/404-mobile-${width}.webp`));
 }
 await sharp(source('404-mobile.png')).resize(800, 800).jpeg({ quality: 78, mozjpeg: true }).toFile(output('images/404-mobile.jpg'));
-await sharp(source('404-original.png')).resize(1280, 720).png({ palette: true, quality: 80, effort: 10 }).toFile(output('images/404.png'));
+// The PNG is the fallback for browsers without WebP; 960px keeps it sharp at its 600px desktop display width.
+await sharp(source('404-original.png')).resize(960, 540).png({ palette: true, quality: 80, effort: 10 }).toFile(output('images/404.png'));
 for (const file of ['404.png', '404-1280.webp', '404-mobile-800.webp']) {
     console.log(`${file}: ${Math.round((await stat(output(`images/${file}`))).size / 1024)} KiB`);
 }
