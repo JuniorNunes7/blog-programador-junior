@@ -18,8 +18,20 @@ final readonly class TemplateRenderer
     /** @param array<string, mixed> $data */
     public function page(string $title, string $template, array $data = []): string
     {
+        $article = $data['article'] ?? null;
+        $path = $data['path'] ?? '/';
+        $description = $data['description'] ?? $this->site['description'];
+        $canonicalUrl = rtrim($this->site['base_url'], '/') . '/' . ltrim($path, '/');
+        $schema = $article === null
+            ? ['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => $this->site['name'], 'url' => rtrim($this->site['base_url'], '/') . '/']
+            : ['@context' => 'https://schema.org', '@type' => 'BlogPosting', 'headline' => $article->metadata->title, 'description' => $article->metadata->description, 'datePublished' => $article->metadata->publishedAt->format('Y-m-d'), 'dateModified' => $article->metadata->publishedAt->format('Y-m-d'), 'mainEntityOfPage' => $canonicalUrl, 'author' => ['@type' => 'Person', 'name' => $this->site['author']], 'publisher' => ['@type' => 'Person', 'name' => $this->site['author']]];
+
         return $this->render('layout', [
+            'article' => $article,
+            'canonicalUrl' => $canonicalUrl,
             'content' => $this->render($template, $data),
+            'description' => $description,
+            'schemaJson' => json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             'site' => $this->site,
             'title' => $title,
         ]);

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Web;
 
-use Blog\Content\ArticleRepository;
-use Blog\Content\FrontMatterParser;
+use Blog\Content\Infrastructure\FrontMatterParser;
+use Blog\Content\Infrastructure\MarkdownArticleRepository;
 use Blog\Web\ArticleIndex;
 use Blog\Web\BlogApplication;
+use Blog\Web\BlogController;
+use Blog\Web\TemplateRenderer;
 use League\CommonMark\CommonMarkConverter;
 use PHPUnit\Framework\TestCase;
 
@@ -98,16 +100,25 @@ MARKDOWN);
     private function application(): BlogApplication
     {
         return new BlogApplication(
-            [
-                'name' => 'Blog teste',
-                'description' => 'Descrição do blog',
-                'author' => 'Autor',
-                'base_url' => 'https://example.test',
-                'articles_per_page' => 10,
-            ],
-            ArticleIndex::fromFile($this->directory . '/index.json'),
-            new ArticleRepository($this->directory . '/articles', new FrontMatterParser()),
-            new CommonMarkConverter(['html_input' => 'strip', 'allow_unsafe_links' => false]),
+            new BlogController(
+                [
+                    'name' => 'Blog teste',
+                    'description' => 'Descrição do blog',
+                    'author' => 'Autor',
+                    'base_url' => 'https://example.test',
+                    'articles_per_page' => 10,
+                ],
+                ArticleIndex::fromFile($this->directory . '/index.json'),
+                new MarkdownArticleRepository($this->directory . '/articles', new FrontMatterParser()),
+                new CommonMarkConverter(['html_input' => 'strip', 'allow_unsafe_links' => false]),
+                new TemplateRenderer(dirname(__DIR__, 2) . '/templates', [
+                    'name' => 'Blog teste',
+                    'description' => 'Descrição do blog',
+                    'author' => 'Autor',
+                    'base_url' => 'https://example.test',
+                    'articles_per_page' => 10,
+                ]),
+            ),
         );
     }
 }

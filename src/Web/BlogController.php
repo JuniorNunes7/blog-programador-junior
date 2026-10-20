@@ -50,15 +50,59 @@ final readonly class BlogController
             return $this->notFound();
         }
 
+        $headers = ['Content-Type' => 'text/html; charset=UTF-8', 'Cache-Control' => 'public, max-age=300'];
+        $modifiedAt = $this->articles->modifiedAt($slug);
+        if ($modifiedAt !== null) {
+            $headers['Last-Modified'] = gmdate('D, d M Y H:i:s', $modifiedAt) . ' GMT';
+            $headers['ETag'] = '"' . sha1($article->markdown) . '"';
+        }
+
         return new Response(200, $this->templates->page($article->metadata->title, 'pages/article', [
             'article' => $article,
             'articleHtml' => $this->markdown->convert($article->markdown)->getContent(),
-        ]));
+            'description' => $article->metadata->description,
+            'path' => '/artigos/' . $slug,
+        ]), $headers);
     }
 
     public function notFound(): Response
     {
         return new Response(404, $this->templates->page('Página não encontrada', 'pages/not-found'));
+    }
+
+    public function sitemap(): Response
+    {
+        $urls = [sprintf('<url><loc>%s</loc></url>', $this->xml($this->absoluteUrl('/')))];
+        foreach ($this->index->articles() as $article) {
+            $urls[] = sprintf('<url><loc>%s</loc><lastmod>%s</lastmod></url>', $this->xml($this->absoluteUrl('/artigos/' . $article['slug'])), $this->xml($article['date']));
+        }
+        foreach (array_keys($this->index->tags()) as $tag) {
+            $urls[] = sprintf('<url><loc>%s</loc></url>', $this->xml($this->absoluteUrl('/tags/' . $tag)));
+        }
+
+        return new Response(200, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" . implode("\n", $urls) . "\n</urlset>\n", [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+
+    public function feed(): Response
+    {
+        $items = array_map(function (array $article): string {
+            $date = new \DateTimeImmutable($article['date'] . 'T00:00:00+00:00');
+            $url = $this->absoluteUrl('/artigos/' . $article['slug']);
+
+            return sprintf('<item><title>%s</title><link>%s</link><guid isPermaLink="true">%s</guid><description>%s</description><pubDate>%s</pubDate></item>', $this->xml($article['title']), $this->xml($url), $this->xml($url), $this->xml($article['description']), $date->format(DATE_RSS));
+        }, $this->index->articles());
+
+        $body = sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\"><channel><title>%s</title><link>%s</link><description>%s</description><language>pt-BR</language>%s</channel></rss>\n", $this->xml($this->site['name']), $this->xml($this->absoluteUrl('/')), $this->xml($this->site['description']), implode('', $items));
+
+        return new Response(200, $body, ['Content-Type' => 'application/rss+xml; charset=UTF-8', 'Cache-Control' => 'public, max-age=3600']);
+    }
+
+    public function robots(): Response
+    {
+        return new Response(200, "User-agent: *\nAllow: /\nSitemap: " . $this->absoluteUrl('/sitemap.xml') . "\n", ['Content-Type' => 'text/plain; charset=UTF-8', 'Cache-Control' => 'public, max-age=3600']);
     }
 
     /** @param list<array{slug: string, title: string, date: string, description: string, keywords: list<string>, tags: list<string>}> $articles */
@@ -93,5 +137,15 @@ final readonly class BlogController
         }
 
         return $basePath === '/' ? '/pagina/' . $page : $basePath . '/pagina/' . $page;
+    }
+
+    private function absoluteUrl(string $path): string
+    {
+        return rtrim($this->site['base_url'], '/') . '/' . ltrim($path, '/');
+    }
+
+    private function xml(string $value): string
+    {
+        return htmlspecialchars($value, ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }

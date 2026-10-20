@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Blog\Web;
 
-use Blog\Content\ContentException;
+use Blog\Content\Errors\ContentException;
 
 final readonly class ArticleIndex
 {
