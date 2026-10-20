@@ -74,13 +74,22 @@ final readonly class BlogController
     {
         $urls = [sprintf('<url><loc>%s</loc></url>', $this->xml($this->absoluteUrl('/')))];
         foreach ($this->index->articles() as $article) {
-            $urls[] = sprintf('<url><loc>%s</loc><lastmod>%s</lastmod></url>', $this->xml($this->absoluteUrl('/artigos/' . $article['slug'])), $this->xml($article['date']));
+            $urls[] = sprintf(
+                '<url><loc>%s</loc><lastmod>%s</lastmod></url>',
+                $this->xml($this->absoluteUrl('/artigos/' . $article['slug'])),
+                $this->xml($article['date']),
+            );
         }
         foreach (array_keys($this->index->tags()) as $tag) {
             $urls[] = sprintf('<url><loc>%s</loc></url>', $this->xml($this->absoluteUrl('/tags/' . $tag)));
         }
 
-        return new Response(200, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" . implode("\n", $urls) . "\n</urlset>\n", [
+        $body = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            . "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
+            . implode("\n", $urls)
+            . "\n</urlset>\n";
+
+        return new Response(200, $body, [
             'Content-Type' => 'application/xml; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
         ]);
@@ -92,17 +101,41 @@ final readonly class BlogController
             $date = new \DateTimeImmutable($article['date'] . 'T00:00:00+00:00');
             $url = $this->absoluteUrl('/artigos/' . $article['slug']);
 
-            return sprintf('<item><title>%s</title><link>%s</link><guid isPermaLink="true">%s</guid><description>%s</description><pubDate>%s</pubDate></item>', $this->xml($article['title']), $this->xml($url), $this->xml($url), $this->xml($article['description']), $date->format(DATE_RSS));
+            return sprintf(
+                '<item><title>%s</title><link>%s</link>'
+                    . '<guid isPermaLink="true">%s</guid><description>%s</description>'
+                    . '<pubDate>%s</pubDate></item>',
+                $this->xml($article['title']),
+                $this->xml($url),
+                $this->xml($url),
+                $this->xml($article['description']),
+                $date->format(DATE_RSS),
+            );
         }, $this->index->articles());
 
-        $body = sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\"><channel><title>%s</title><link>%s</link><description>%s</description><language>pt-BR</language>%s</channel></rss>\n", $this->xml($this->site['name']), $this->xml($this->absoluteUrl('/')), $this->xml($this->site['description']), implode('', $items));
+        $body = sprintf(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                . '<rss version="2.0"><channel><title>%s</title><link>%s</link>'
+                . '<description>%s</description><language>pt-BR</language>%s</channel></rss>'
+                . "\n",
+            $this->xml($this->site['name']),
+            $this->xml($this->absoluteUrl('/')),
+            $this->xml($this->site['description']),
+            implode('', $items),
+        );
 
-        return new Response(200, $body, ['Content-Type' => 'application/rss+xml; charset=UTF-8', 'Cache-Control' => 'public, max-age=3600']);
+        return new Response(200, $body, [
+            'Content-Type' => 'application/rss+xml; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
     }
 
     public function robots(): Response
     {
-        return new Response(200, "User-agent: *\nAllow: /\nSitemap: " . $this->absoluteUrl('/sitemap.xml') . "\n", ['Content-Type' => 'text/plain; charset=UTF-8', 'Cache-Control' => 'public, max-age=3600']);
+        return new Response(200, "User-agent: *\nAllow: /\nSitemap: " . $this->absoluteUrl('/sitemap.xml') . "\n", [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
     }
 
     /** @param list<array{slug: string, title: string, date: string, description: string, keywords: list<string>, tags: list<string>}> $articles */

@@ -23,8 +23,23 @@ final readonly class TemplateRenderer
         $description = $data['description'] ?? $this->site['description'];
         $canonicalUrl = rtrim($this->site['base_url'], '/') . '/' . ltrim($path, '/');
         $schema = $article === null
-            ? ['@context' => 'https://schema.org', '@type' => 'WebSite', 'name' => $this->site['name'], 'url' => rtrim($this->site['base_url'], '/') . '/']
-            : ['@context' => 'https://schema.org', '@type' => 'BlogPosting', 'headline' => $article->metadata->title, 'description' => $article->metadata->description, 'datePublished' => $article->metadata->publishedAt->format('Y-m-d'), 'dateModified' => $article->metadata->publishedAt->format('Y-m-d'), 'mainEntityOfPage' => $canonicalUrl, 'author' => ['@type' => 'Person', 'name' => $this->site['author']], 'publisher' => ['@type' => 'Person', 'name' => $this->site['author']]];
+            ? [
+                '@context' => 'https://schema.org',
+                '@type' => 'WebSite',
+                'name' => $this->site['name'],
+                'url' => rtrim($this->site['base_url'], '/') . '/',
+            ]
+            : [
+                '@context' => 'https://schema.org',
+                '@type' => 'BlogPosting',
+                'headline' => $article->metadata->title,
+                'description' => $article->metadata->description,
+                'datePublished' => $article->metadata->publishedAt->format('Y-m-d'),
+                'dateModified' => $article->metadata->publishedAt->format('Y-m-d'),
+                'mainEntityOfPage' => $canonicalUrl,
+                'author' => ['@type' => 'Person', 'name' => $this->site['author']],
+                'publisher' => ['@type' => 'Person', 'name' => $this->site['author']],
+            ];
 
         return $this->render('layout', [
             'article' => $article,

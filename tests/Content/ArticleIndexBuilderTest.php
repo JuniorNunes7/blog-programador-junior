@@ -54,7 +54,9 @@ final class ArticleIndexBuilderTest extends TestCase
         (new ArticleIndexWriter())->write($destination, $builder->build());
 
         self::assertFileExists($destination);
-        self::assertSame('segundo', json_decode((string) file_get_contents($destination), true, flags: JSON_THROW_ON_ERROR)['articles'][0]['slug']);
+        $index = json_decode((string) file_get_contents($destination), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame('segundo', $index['articles'][0]['slug']);
     }
 
     private function article(string $title, string $date): string

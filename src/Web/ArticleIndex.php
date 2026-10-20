@@ -17,7 +17,9 @@ final readonly class ArticleIndex
     {
         $contents = file_get_contents($path);
         if ($contents === false) {
-            throw new ContentException('O índice de artigos não existe. Execute php bin/build-index.php antes de publicar.');
+            throw new ContentException(
+                'O índice de artigos não existe. Execute php bin/build-index.php antes de publicar.',
+            );
         }
 
         try {
@@ -74,7 +76,11 @@ final readonly class ArticleIndex
     {
         return array_values(array_filter(
             $this->articles,
-            static fn (array $article): bool => in_array($tagSlug, array_map(TagSlugger::slug(...), $article['tags']), true),
+            static fn (array $article): bool => in_array(
+                $tagSlug,
+                array_map(TagSlugger::slug(...), $article['tags']),
+                true,
+            ),
         ));
     }
 }
