@@ -1,0 +1,181 @@
+@font-face {
+    font-family: Manrope;
+    src: url('/assets/fonts/manrope-500.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: Manrope;
+    src: url('/assets/fonts/manrope-800.woff2') format('woff2');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Source Sans 3';
+    src: url('/assets/fonts/source-sans-3-400.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Source Sans 3';
+    src: url('/assets/fonts/source-sans-3-600.woff2') format('woff2');
+    font-weight: 600 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IBM Plex Mono';
+    src: url('/assets/fonts/ibm-plex-mono-400.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+html {
+    background: var(--bg);
+    scroll-padding-top: 2rem;
+}
+
+body {
+    margin: 0;
+    color: var(--text);
+    background: var(--bg);
+    font: 400 1.125rem/1.65 var(--font-body);
+    overflow-wrap: break-word;
+}
+
+::selection {
+    background: var(--brand);
+    color: var(--on-brand);
+}
+
+a {
+    color: var(--brand);
+    text-decoration-thickness: 1px;
+    text-underline-offset: .22em;
+}
+
+a:hover {
+    text-decoration-thickness: 2px;
+}
+
+a, button, select {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+img, svg {
+    max-width: 100%;
+}
+
+img {
+    height: auto;
+    display: block;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -.04em;
+    text-wrap: pretty;
+}
+
+h1, h2, h3, p {
+    margin: 0;
+}
+
+h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+p + p {
+    margin-top: 1em;
+}
+
+button, input, select {
+    font: inherit;
+}
+
+select {
+    max-width: 100%;
+    cursor: pointer;
+}
+
+.site-shell {
+    width: min(calc(100% - 40px), var(--page-width));
+    margin-inline: auto;
+}
+
+main.site-shell {
+    min-height: 60vh;
+    padding-block: clamp(2rem, 5vw, 4.5rem);
+}
+
+.skip-link {
+    position: fixed;
+    z-index: 100;
+    inset: 1rem auto auto 1rem;
+    padding: .75rem 1rem;
+    background: var(--brand);
+    color: var(--on-brand);
+    transform: translateY(-200%);
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+}
+
+.eyebrow {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    font: 400 .75rem/1.5 var(--font-code);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.accent-line {
+    display: inline-block;
+    width: 2rem;
+    height: 3px;
+    background: var(--accent);
+}
+
+@media (min-width: 48rem) {
+    .site-shell {
+        width: min(calc(100% - 64px), var(--page-width));
+    }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+        animation: none !important;
+    }
+
+}

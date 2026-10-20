@@ -7,6 +7,7 @@ namespace Tests\Web;
 use Blog\Content\Infrastructure\FrontMatterParser;
 use Blog\Content\Infrastructure\MarkdownArticleRepository;
 use Blog\Web\ArticleIndex;
+use Blog\Web\ArticleRenderer;
 use Blog\Web\BlogApplication;
 use Blog\Web\BlogController;
 use Blog\Web\TemplateRenderer;
@@ -63,7 +64,8 @@ MARKDOWN);
         $response = $this->application()->handle('GET', '/artigos/um-artigo');
 
         self::assertSame(200, $response->status);
-        self::assertStringContainsString('<h1>Olá</h1>', $response->body);
+        self::assertStringContainsString('<h2>Olá</h2>', $response->body);
+        self::assertSame(1, substr_count($response->body, '<h1'));
         self::assertStringNotContainsString('<script>', $response->body);
         self::assertStringContainsString(
             '<link rel="canonical" href="https://example.test/artigos/um-artigo">',
@@ -79,6 +81,10 @@ MARKDOWN);
 
         self::assertSame(200, $response->status);
         self::assertStringContainsString('Artigos sobre PHP', $response->body);
+        self::assertStringContainsString(
+            '<link rel="canonical" href="https://example.test/tags/php">',
+            $response->body,
+        );
     }
 
     public function testItReturnsNotFoundForUnknownRoutes(): void
@@ -86,6 +92,8 @@ MARKDOWN);
         $response = $this->application()->handle('GET', '/artigos/nao-existe');
 
         self::assertSame(404, $response->status);
+        self::assertStringContainsString('content="noindex, follow"', $response->body);
+        self::assertStringNotContainsString('rel="canonical"', $response->body);
     }
 
     public function testItGeneratesSitemapRssAndRobotsFromTheIndex(): void
@@ -106,27 +114,109 @@ MARKDOWN);
         self::assertStringContainsString('Sitemap: https://example.test/sitemap.xml', $robots->body);
     }
 
-    private function application(): BlogApplication
+    public function testItSuppressesOnlyTheMatchingLeadingMarkdownTitle(): void
     {
+        $path = $this->directory . '/articles/um-artigo.md';
+        $source = file_get_contents($path);
+        file_put_contents($path, str_replace('# Olá', "# Um **artigo**\n\n# Uma seção\n\n## Outra seção", $source));
+
+        $body = $this->application()->handle('GET', '/artigos/um-artigo')->body;
+
+        self::assertSame(1, substr_count($body, '<h1'));
+        self::assertStringNotContainsString('<h2>Um <strong>artigo</strong></h2>', $body);
+        self::assertStringContainsString('<h2>Uma seção</h2>', $body);
+        self::assertStringContainsString('<h2>Outra seção</h2>', $body);
+    }
+
+    public function testPaginatedListingsHaveTheirOwnCanonicalAndTitle(): void
+    {
+        $path = $this->directory . '/index.json';
+        $data = json_decode(file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+        $data['articles'] = array_fill(0, 11, $data['articles'][0]);
+        file_put_contents($path, json_encode($data, JSON_THROW_ON_ERROR));
+
+        foreach (['/pagina/2', '/tags/php/pagina/2'] as $route) {
+            $body = $this->application()->handle('GET', $route)->body;
+            self::assertStringContainsString('href="https://example.test' . $route . '"', $body);
+            self::assertStringContainsString('content="https://example.test' . $route . '"', $body);
+            self::assertStringContainsString('— Página 2 · Blog teste</title>', $body);
+        }
+        self::assertSame(404, $this->application()->handle('GET', '/pagina/3')->status);
+    }
+
+    public function testStructuredDataPreservesTextAndCannotCloseItsScriptElement(): void
+    {
+        $path = $this->directory . '/articles/um-artigo.md';
+        $title = 'Código & dados </script> seguros';
+        file_put_contents($path, str_replace('title: Um artigo', 'title: ' . $title, file_get_contents($path)));
+        $body = $this->application()->handle('GET', '/artigos/um-artigo')->body;
+        preg_match('#<script type="application/ld\+json">(.*?)</script>#s', $body, $matches);
+        $schema = json_decode($matches[1], true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame($title, $schema['headline']);
+        self::assertSame('https://example.test/assets/brand/banner-light.png', $schema['image']);
+        self::assertStringNotContainsString('</script>', $matches[1]);
+        self::assertStringContainsString('name="twitter:card" content="summary_large_image"', $body);
+        self::assertStringContainsString('property="og:image:width" content="1200"', $body);
+    }
+
+    public function testEtagIdentifiesTheRenderedPageIncludingMetadata(): void
+    {
+        $first = $this->application()->handle('GET', '/artigos/um-artigo');
+        self::assertSame('"' . hash('sha256', $first->body) . '"', $first->headers['ETag']);
+
+        $second = $this->application(['author' => 'Outro autor'])->handle('GET', '/artigos/um-artigo');
+
+        self::assertNotSame($first->headers['ETag'], $second->headers['ETag']);
+    }
+
+    public function testArticleImagesAndScrollableBlocksAreAccessibleWithoutJavascript(): void
+    {
+        $path = $this->directory . '/articles/um-artigo.md';
+        file_put_contents($path, file_get_contents($path) . <<<'MARKDOWN'
+
+```php
+echo '<script>';
+```
+
+| Campo | Valor |
+| --- | --- |
+| Teste | Longo |
+
+![Papel](/assets/images/editorial-paper-640.webp)
+
+[Link inseguro](javascript:alert(1))
+MARKDOWN);
+
+        $body = $this->application()->handle('GET', '/artigos/um-artigo')->body;
+        self::assertStringContainsString('<pre tabindex="0" role="region" aria-label="Bloco de código">', $body);
+        self::assertStringContainsString('aria-label="Tabela" class="table-scroll"', $body);
+        self::assertStringContainsString('loading="lazy" decoding="async" width="640" height="720"', $body);
+        self::assertStringNotContainsString('href="javascript:', $body);
+        self::assertStringContainsString('&lt;script&gt;', $body);
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function application(array $overrides = []): BlogApplication
+    {
+        $site = array_replace([
+            'name' => 'Blog teste',
+            'description' => 'Descrição do blog',
+            'author' => 'Autor',
+            'base_url' => 'https://example.test',
+            'articles_per_page' => 10,
+        ], $overrides);
+
         return new BlogApplication(
             new BlogController(
-                [
-                    'name' => 'Blog teste',
-                    'description' => 'Descrição do blog',
-                    'author' => 'Autor',
-                    'base_url' => 'https://example.test',
-                    'articles_per_page' => 10,
-                ],
+                $site,
                 ArticleIndex::fromFile($this->directory . '/index.json'),
                 new MarkdownArticleRepository($this->directory . '/articles', new FrontMatterParser()),
-                new CommonMarkConverter(['html_input' => 'strip', 'allow_unsafe_links' => false]),
-                new TemplateRenderer(dirname(__DIR__, 2) . '/templates', [
-                    'name' => 'Blog teste',
-                    'description' => 'Descrição do blog',
-                    'author' => 'Autor',
-                    'base_url' => 'https://example.test',
-                    'articles_per_page' => 10,
-                ]),
+                new ArticleRenderer(
+                    new CommonMarkConverter(['html_input' => 'strip', 'allow_unsafe_links' => false]),
+                    dirname(__DIR__, 2) . '/public',
+                ),
+                new TemplateRenderer(dirname(__DIR__, 2) . '/templates', $site),
             ),
         );
     }

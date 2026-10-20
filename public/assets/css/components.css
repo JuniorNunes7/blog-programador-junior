@@ -1,0 +1,260 @@
+.site-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.header-inner {
+    min-height: 6rem;
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--text);
+    text-decoration: none;
+    font: 500 1.3rem/1.1 var(--font-heading);
+    letter-spacing: -.055em;
+    white-space: nowrap;
+}
+
+.brand strong {
+    color: var(--brand);
+    font-weight: 800;
+}
+
+.brand-cursor {
+    color: var(--accent);
+}
+
+.brand-short {
+    display: none;
+    font-weight: 800;
+    font-size: 2rem;
+}
+
+.main-nav {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    margin-left: auto;
+}
+
+.main-nav a {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    color: var(--text);
+    font-size: 1rem;
+    text-decoration: none;
+}
+
+.main-nav a:hover {
+    text-decoration: underline;
+}
+
+.theme-picker {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    font-size: .875rem;
+}
+
+.theme-picker label {
+    color: var(--text-muted);
+}
+
+.theme-picker select {
+    min-height: 44px;
+    padding: .4rem .5rem;
+    border: 1px solid var(--control-border);
+    border-radius: var(--radius-control);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1rem;
+}
+
+.site-footer {
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+}
+
+.footer-inner {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: space-between;
+    align-items: center;
+    padding-block: 2.5rem;
+    color: var(--text-muted);
+    font-size: .9375rem;
+}
+
+.footer-inner p + p {
+    margin-top: .3rem;
+}
+
+.footer-signature {
+    color: var(--text);
+    font-family: var(--font-heading);
+    font-weight: 500;
+}
+
+.footer-inner a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    gap: .75rem;
+}
+
+.tags {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem .75rem;
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: .875rem;
+    text-decoration: none;
+}
+
+.tag span {
+    padding-right: .2em;
+    color: var(--accent);
+}
+
+.tag:hover {
+    text-decoration: underline;
+}
+
+.article-meta {
+    font-size: .9375rem;
+    color: var(--text-muted);
+}
+
+.button {
+    display: inline-flex;
+    gap: .75rem;
+    justify-content: center;
+    align-items: center;
+    min-height: 48px;
+    padding: .65rem 1.1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    background: var(--brand);
+    color: var(--on-brand);
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 180ms;
+}
+
+.button:hover {
+    text-decoration: underline;
+}
+
+.button:active {
+    transform: translateY(1px);
+}
+
+.button-secondary {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--control-border);
+}
+
+.button-secondary:hover {
+    background: var(--surface-raised);
+}
+
+.text-link, .back-link {
+    display: inline-flex;
+    gap: .75rem;
+    align-items: center;
+    min-height: 44px;
+}
+
+.back-link {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-bottom: 2rem;
+}
+
+.pagination {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2.5rem;
+}
+
+.pagination a {
+    justify-self: start;
+}
+
+.pagination a:last-child {
+    justify-self: end;
+}
+
+.page-number {
+    color: var(--text-muted);
+    font-size: .9375rem;
+    text-align: center;
+}
+
+@media (max-width: 47.99rem) {
+    .header-inner {
+        min-height: 5rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+        padding-block: .75rem;
+    }
+
+    .brand-full {
+        display: none;
+    }
+
+    .brand-short {
+        display: inline;
+    }
+
+    .main-nav {
+        gap: 1rem;
+    }
+
+    .theme-picker label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .pagination {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .page-number {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .pagination .button {
+        font-size: 1rem;
+        padding-inline: .65rem;
+    }
+
+}

@@ -4,3 +4,7 @@
 /storage/article-index.json
 /.DS_Store
 /.env
+/node_modules/
+/test-results/
+/playwright-report/
+/artifacts/previews/

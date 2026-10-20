@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Blog\Web;
 
 use Blog\Content\Contract\ArticleRepository;
-use League\CommonMark\CommonMarkConverter;
 
 final readonly class BlogController
 {
@@ -14,7 +13,7 @@ final readonly class BlogController
         private array $site,
         private ArticleIndex $index,
         private ArticleRepository $articles,
-        private CommonMarkConverter $markdown,
+        private ArticleRenderer $articleRenderer,
         private TemplateRenderer $templates,
     ) {
     }
@@ -50,24 +49,30 @@ final readonly class BlogController
             return $this->notFound();
         }
 
-        $headers = ['Content-Type' => 'text/html; charset=UTF-8', 'Cache-Control' => 'public, max-age=300'];
+        $body = $this->templates->page($article->metadata->title, 'pages/article', [
+            'article' => $article,
+            'articleHtml' => $this->articleRenderer->render($article),
+            'description' => $article->metadata->description,
+            'path' => '/artigos/' . $slug,
+        ]);
+        $headers = [
+            'Content-Type' => 'text/html; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=300',
+            'ETag' => '"' . hash('sha256', $body) . '"',
+        ];
         $modifiedAt = $this->articles->modifiedAt($slug);
         if ($modifiedAt !== null) {
             $headers['Last-Modified'] = gmdate('D, d M Y H:i:s', $modifiedAt) . ' GMT';
-            $headers['ETag'] = '"' . sha1($article->markdown) . '"';
         }
 
-        return new Response(200, $this->templates->page($article->metadata->title, 'pages/article', [
-            'article' => $article,
-            'articleHtml' => $this->markdown->convert($article->markdown)->getContent(),
-            'description' => $article->metadata->description,
-            'path' => '/artigos/' . $slug,
-        ]), $headers);
+        return new Response(200, $body, $headers);
     }
 
     public function notFound(): Response
     {
-        return new Response(404, $this->templates->page('Página não encontrada', 'pages/not-found'));
+        return new Response(404, $this->templates->page('Página não encontrada', 'pages/not-found', [
+            'noindex' => true,
+        ]));
     }
 
     public function sitemap(): Response
@@ -136,10 +141,22 @@ final readonly class BlogController
             $this->site['articles_per_page'],
         );
 
-        return new Response(200, $this->templates->page($heading, 'pages/listing', [
+        $title = $heading . ($page > 1 ? ' — Página ' . $page : '');
+        $description = $basePath === '/'
+            ? $this->site['description']
+            : $heading . '. Textos de ' . $this->site['author'] . ' no ' . $this->site['name'] . '.';
+        if ($page > 1) {
+            $description .= ' Página ' . $page . '.';
+        }
+
+        return new Response(200, $this->templates->page($title, 'pages/listing', [
             'articles' => $visibleArticles,
-            'description' => $this->site['description'],
+            'description' => $description,
             'heading' => $heading,
+            'path' => $this->pageUrl($basePath, $page),
+            'isHome' => $basePath === '/' && $page === 1,
+            'activeTag' => $basePath === '/' ? null : substr($basePath, strlen('/tags/')),
+            'availableTags' => $this->index->tags(),
             'nextUrl' => $page < $totalPages ? $this->pageUrl($basePath, $page + 1) : null,
             'page' => $page,
             'previousUrl' => $page > 1 ? $this->pageUrl($basePath, $page - 1) : null,
