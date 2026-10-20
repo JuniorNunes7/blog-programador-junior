@@ -1,0 +1,1 @@
+<p class="article-meta"><time datetime="<?= $this->escape($date) ?>"><?= $this->escape($this->date($date)) ?></time><?php if (isset($author)): ?><span aria-hidden="true"> · </span><span><?= $this->escape($author) ?></span><?php endif; ?></p>

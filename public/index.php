@@ -6,6 +6,7 @@ use Blog\Content\Errors\ContentException;
 use Blog\Content\Infrastructure\FrontMatterParser;
 use Blog\Content\Infrastructure\MarkdownArticleRepository;
 use Blog\Web\ArticleIndex;
+use Blog\Web\ArticleRenderer;
 use Blog\Web\BlogApplication;
 use Blog\Web\BlogController;
 use Blog\Web\TemplateRenderer;
@@ -22,10 +23,10 @@ try {
             $site,
             ArticleIndex::fromFile($root . '/storage/article-index.json'),
             new MarkdownArticleRepository($root . '/content/articles', new FrontMatterParser()),
-            new CommonMarkConverter([
+            new ArticleRenderer(new CommonMarkConverter([
                 'html_input' => 'strip',
                 'allow_unsafe_links' => false,
-            ]),
+            ]), $root . '/public'),
             new TemplateRenderer($root . '/templates', $site),
         ),
     );

@@ -1,0 +1,139 @@
+.post {
+    max-width: var(--content-width);
+    margin-inline: auto;
+    font-size: clamp(1.125rem, 1rem + .3vw, 1.25rem);
+}
+
+.post-header {
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.post-header h1 {
+    margin-block: .75rem 1.25rem;
+}
+
+.post-description {
+    color: var(--text-muted);
+    font-size: 1.1em;
+    margin-bottom: 1.5rem;
+}
+
+.prose {
+    margin-top: 2.5rem;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+.prose > :first-child {
+    margin-top: 0;
+}
+
+.prose h2 {
+    font-size: 1.65em;
+}
+
+.prose h3 {
+    font-size: 1.3em;
+}
+
+.prose h4, .prose h5, .prose h6 {
+    font-size: 1.1em;
+}
+
+.prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    margin-block: 2em .75em;
+}
+
+.prose p, .prose ul, .prose ol, .prose pre, .prose blockquote, .prose table {
+    margin-block: 1.3em;
+}
+
+.prose ul, .prose ol {
+    padding-left: 1.5em;
+}
+
+.prose li + li {
+    margin-top: .4em;
+}
+
+.prose li::marker {
+    color: var(--brand);
+}
+
+.prose code {
+    font-family: var(--font-code);
+    font-size: .8em;
+    padding: .15em .35em;
+    border-radius: .2rem;
+    background: var(--surface);
+}
+
+.prose pre {
+    overflow-x: auto;
+    max-width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 1.25rem;
+    line-height: 1.6;
+    font-size: .9375rem;
+}
+
+.prose pre code {
+    padding: 0;
+    background: transparent;
+    font-size: 1em;
+}
+
+.prose blockquote {
+    margin-inline: 0;
+    padding: .25em 0 .25em 1.25em;
+    border-left: 3px solid var(--accent);
+    color: var(--text-muted);
+}
+
+.prose blockquote p {
+    margin-block: .5em;
+}
+
+.prose img {
+    border-radius: var(--radius-card);
+    max-width: 100%;
+}
+
+.prose .table-scroll {
+    overflow-x: auto;
+}
+
+.prose table {
+    border-collapse: collapse;
+    min-width: 36rem;
+    width: 100%;
+}
+
+.prose td, .prose th {
+    min-width: 8rem;
+    overflow-wrap: normal;
+    padding: .5em 1em;
+    border: 1px solid var(--border);
+    text-align: left;
+}
+
+.prose hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin-block: 2rem;
+}
+
+.post-footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    font-size: 1rem;
+}
+
+.post-footer p {
+    margin-block: .5rem;
+    color: var(--text-muted);
+}

@@ -1,0 +1,17 @@
+{
+  "name": "programador-junior-front",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:assets": "node bin/build-assets.mjs",
+    "test:front": "playwright test",
+    "test:front:container": "node bin/test-front-container.mjs",
+    "test:visual": "playwright test --project=visual",
+    "test:visual:update": "playwright test --project=visual --update-snapshots"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "1.64.1",
+    "sharp": "^0.35.5"
+  }
+}
