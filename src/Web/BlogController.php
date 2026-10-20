@@ -72,24 +72,18 @@ final readonly class BlogController
 
     public function sitemap(): Response
     {
-        $urls = [sprintf('<url><loc>%s</loc></url>', $this->xml($this->absoluteUrl('/')))];
+        $urls = [['url' => $this->absoluteUrl('/')]];
         foreach ($this->index->articles() as $article) {
-            $urls[] = sprintf(
-                '<url><loc>%s</loc><lastmod>%s</lastmod></url>',
-                $this->xml($this->absoluteUrl('/artigos/' . $article['slug'])),
-                $this->xml($article['date']),
-            );
+            $urls[] = [
+                'url' => $this->absoluteUrl('/artigos/' . $article['slug']),
+                'lastModified' => $article['date'],
+            ];
         }
         foreach (array_keys($this->index->tags()) as $tag) {
-            $urls[] = sprintf('<url><loc>%s</loc></url>', $this->xml($this->absoluteUrl('/tags/' . $tag)));
+            $urls[] = ['url' => $this->absoluteUrl('/tags/' . $tag)];
         }
 
-        $body = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            . "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
-            . implode("\n", $urls)
-            . "\n</urlset>\n";
-
-        return new Response(200, $body, [
+        return new Response(200, $this->templates->render('seo/sitemap', ['urls' => $urls]), [
             'Content-Type' => 'application/xml; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
         ]);
@@ -97,34 +91,22 @@ final readonly class BlogController
 
     public function feed(): Response
     {
-        $items = array_map(function (array $article): string {
+        $items = array_map(function (array $article): array {
             $date = new \DateTimeImmutable($article['date'] . 'T00:00:00+00:00');
-            $url = $this->absoluteUrl('/artigos/' . $article['slug']);
 
-            return sprintf(
-                '<item><title>%s</title><link>%s</link>'
-                    . '<guid isPermaLink="true">%s</guid><description>%s</description>'
-                    . '<pubDate>%s</pubDate></item>',
-                $this->xml($article['title']),
-                $this->xml($url),
-                $this->xml($url),
-                $this->xml($article['description']),
-                $date->format(DATE_RSS),
-            );
+            return [
+                'title' => $article['title'],
+                'url' => $this->absoluteUrl('/artigos/' . $article['slug']),
+                'description' => $article['description'],
+                'publishedAt' => $date->format(DATE_RSS),
+            ];
         }, $this->index->articles());
 
-        $body = sprintf(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                . '<rss version="2.0"><channel><title>%s</title><link>%s</link>'
-                . '<description>%s</description><language>pt-BR</language>%s</channel></rss>'
-                . "\n",
-            $this->xml($this->site['name']),
-            $this->xml($this->absoluteUrl('/')),
-            $this->xml($this->site['description']),
-            implode('', $items),
-        );
-
-        return new Response(200, $body, [
+        return new Response(200, $this->templates->render('seo/feed', [
+            'items' => $items,
+            'site' => $this->site,
+            'siteUrl' => $this->absoluteUrl('/'),
+        ]), [
             'Content-Type' => 'application/rss+xml; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
         ]);
@@ -132,7 +114,9 @@ final readonly class BlogController
 
     public function robots(): Response
     {
-        return new Response(200, "User-agent: *\nAllow: /\nSitemap: " . $this->absoluteUrl('/sitemap.xml') . "\n", [
+        return new Response(200, $this->templates->render('seo/robots', [
+            'sitemapUrl' => $this->absoluteUrl('/sitemap.xml'),
+        ]), [
             'Content-Type' => 'text/plain; charset=UTF-8',
             'Cache-Control' => 'public, max-age=3600',
         ]);
@@ -175,10 +159,5 @@ final readonly class BlogController
     private function absoluteUrl(string $path): string
     {
         return rtrim($this->site['base_url'], '/') . '/' . ltrim($path, '/');
-    }
-
-    private function xml(string $value): string
-    {
-        return htmlspecialchars($value, ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }

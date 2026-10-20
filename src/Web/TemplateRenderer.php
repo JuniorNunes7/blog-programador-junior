@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Blog\Web;
 
+use Blog\Content\Model\Article;
 use RuntimeException;
 
 final readonly class TemplateRenderer
@@ -23,23 +24,8 @@ final readonly class TemplateRenderer
         $description = $data['description'] ?? $this->site['description'];
         $canonicalUrl = rtrim($this->site['base_url'], '/') . '/' . ltrim($path, '/');
         $schema = $article === null
-            ? [
-                '@context' => 'https://schema.org',
-                '@type' => 'WebSite',
-                'name' => $this->site['name'],
-                'url' => rtrim($this->site['base_url'], '/') . '/',
-            ]
-            : [
-                '@context' => 'https://schema.org',
-                '@type' => 'BlogPosting',
-                'headline' => $article->metadata->title,
-                'description' => $article->metadata->description,
-                'datePublished' => $article->metadata->publishedAt->format('Y-m-d'),
-                'dateModified' => $article->metadata->publishedAt->format('Y-m-d'),
-                'mainEntityOfPage' => $canonicalUrl,
-                'author' => ['@type' => 'Person', 'name' => $this->site['author']],
-                'publisher' => ['@type' => 'Person', 'name' => $this->site['author']],
-            ];
+            ? $this->websiteSchema()
+            : $this->blogPostingSchema($article, $canonicalUrl);
 
         return $this->render('layout', [
             'article' => $article,
@@ -80,5 +66,32 @@ final readonly class TemplateRenderer
     public function tagUrl(string $tag): string
     {
         return '/tags/' . rawurlencode(TagSlugger::slug($tag));
+    }
+
+    /** @return array<string, string> */
+    private function websiteSchema(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => $this->site['name'],
+            'url' => rtrim($this->site['base_url'], '/') . '/',
+        ];
+    }
+
+    /** @return array<string, string|array<string, string>> */
+    private function blogPostingSchema(Article $article, string $canonicalUrl): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BlogPosting',
+            'headline' => $article->metadata->title,
+            'description' => $article->metadata->description,
+            'datePublished' => $article->metadata->publishedAt->format('Y-m-d'),
+            'dateModified' => $article->metadata->publishedAt->format('Y-m-d'),
+            'mainEntityOfPage' => $canonicalUrl,
+            'author' => ['@type' => 'Person', 'name' => $this->site['author']],
+            'publisher' => ['@type' => 'Person', 'name' => $this->site['author']],
+        ];
     }
 }
