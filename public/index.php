@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Blog\Content\ArticleRepository;
-use Blog\Content\ContentException;
-use Blog\Content\FrontMatterParser;
+use Blog\Content\Errors\ContentException;
+use Blog\Content\Infrastructure\FrontMatterParser;
+use Blog\Content\Infrastructure\MarkdownArticleRepository;
 use Blog\Web\ArticleIndex;
 use Blog\Web\BlogApplication;
 use League\CommonMark\CommonMarkConverter;
@@ -18,7 +18,7 @@ try {
     $application = new BlogApplication(
         $site,
         ArticleIndex::fromFile($root . '/storage/article-index.json'),
-        new ArticleRepository($root . '/content/articles', new FrontMatterParser()),
+        new MarkdownArticleRepository($root . '/content/articles', new FrontMatterParser()),
         new CommonMarkConverter([
             'html_input' => 'strip',
             'allow_unsafe_links' => false,

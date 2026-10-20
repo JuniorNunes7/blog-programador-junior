@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Blog\Web;
 
-use Blog\Content\ArticleRepository;
+use Blog\Content\Contract\ArticleRepository;
 use League\CommonMark\CommonMarkConverter;
 
 final readonly class BlogApplication

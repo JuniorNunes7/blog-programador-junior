@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Web;
 
-use Blog\Content\ArticleRepository;
-use Blog\Content\FrontMatterParser;
+use Blog\Content\Infrastructure\FrontMatterParser;
+use Blog\Content\Infrastructure\MarkdownArticleRepository;
 use Blog\Web\ArticleIndex;
 use Blog\Web\BlogApplication;
 use League\CommonMark\CommonMarkConverter;
@@ -91,7 +91,7 @@ MARKDOWN);
                 'articles_per_page' => 10,
             ],
             ArticleIndex::fromFile($this->directory . '/index.json'),
-            new ArticleRepository($this->directory . '/articles', new FrontMatterParser()),
+            new MarkdownArticleRepository($this->directory . '/articles', new FrontMatterParser()),
             new CommonMarkConverter(['html_input' => 'strip', 'allow_unsafe_links' => false]),
         );
     }
