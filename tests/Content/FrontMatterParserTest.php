@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Content;
 
-use Blog\Content\ContentException;
-use Blog\Content\FrontMatterParser;
+use Blog\Content\Errors\ContentException;
+use Blog\Content\Infrastructure\FrontMatterParser;
 use PHPUnit\Framework\TestCase;
 
 final class FrontMatterParserTest extends TestCase
