@@ -9,7 +9,7 @@ use RuntimeException;
 
 final readonly class TemplateRenderer
 {
-    /** @param array{name: string, description: string, author: string, base_url: string, articles_per_page: int} $site */
+    /** @param array{name: string, description: string, author: string, base_url: string, articles_per_page: int, social: array{linkedin: ?string, github: ?string, instagram: ?string}} $site */
     public function __construct(
         private string $templateDirectory,
         private array $site,

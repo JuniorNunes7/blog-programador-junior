@@ -30,7 +30,8 @@ if (!is_dir($directory)) {
             : 'Artigo de teste ' . $number;
         $description = 'Conteúdo de teste isolado para validar navegação, leitura e apresentação dos artigos.';
         $date = sprintf('2026-10-%02d', 20 - $number);
-        $tags = ['PHP', 'reflexões'];
+        $topics = ['reflexões', 'arquitetura', 'carreira', 'testes', 'docker', 'linux', 'laravel', 'aprendizados'];
+        $tags = ['PHP', $topics[($number - 1) % count($topics)]];
         $articles[] = compact('slug', 'title', 'date', 'description', 'tags') + ['keywords' => ['php']];
         $body = "# $title\n\n";
         if ($number === 1) {
@@ -54,15 +55,25 @@ if (!is_dir($directory)) {
         );
     }
     file_put_contents($directory . '/index.json', json_encode(['articles' => $articles], JSON_THROW_ON_ERROR));
+    file_put_contents($directory . '/single.json', json_encode(['articles' => [$articles[0]]], JSON_THROW_ON_ERROR));
     file_put_contents($directory . '/empty.json', '{"articles":[]}');
 }
 $empty = $path === '/__empty';
+$single = $path === '/__single';
+$withSocial = $path === '/__with-social';
 $site = require $root . '/config/site.php';
 $site['base_url'] = 'http://127.0.0.1:8765';
 $site['articles_per_page'] = 5;
+if ($withSocial) {
+    $site['social'] = [
+        'linkedin' => 'https://www.linkedin.com/in/programador-junior',
+        'github' => 'https://github.com/programador-junior',
+        'instagram' => 'https://www.instagram.com/programador-junior',
+    ];
+}
 $application = new BlogApplication(new BlogController(
     $site,
-    ArticleIndex::fromFile($directory . ($empty ? '/empty.json' : '/index.json')),
+    ArticleIndex::fromFile($directory . ($empty ? '/empty.json' : ($single ? '/single.json' : '/index.json'))),
     new MarkdownArticleRepository($directory . '/articles', new FrontMatterParser()),
     new ArticleRenderer(
         new CommonMarkConverter(['html_input' => 'strip', 'allow_unsafe_links' => false]),
@@ -70,4 +81,7 @@ $application = new BlogApplication(new BlogController(
     ),
     new TemplateRenderer($root . '/templates', $site),
 ));
-$application->handle($_SERVER['REQUEST_METHOD'], $empty ? '/' : $_SERVER['REQUEST_URI'])->send();
+$application->handle(
+    $_SERVER['REQUEST_METHOD'],
+    $empty || $single || $withSocial ? '/' : $_SERVER['REQUEST_URI']
+)->send();

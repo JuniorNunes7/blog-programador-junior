@@ -9,12 +9,14 @@ use Blog\Web\ArticleIndex;
 use Blog\Web\ArticleRenderer;
 use Blog\Web\BlogApplication;
 use Blog\Web\BlogController;
+use Blog\Web\Environment;
 use Blog\Web\TemplateRenderer;
 use League\CommonMark\CommonMarkConverter;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 $root = dirname(__DIR__);
+Environment::load($root . '/.env');
 $site = require $root . '/config/site.php';
 
 try {

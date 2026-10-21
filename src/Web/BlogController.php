@@ -8,7 +8,7 @@ use Blog\Content\Contract\ArticleRepository;
 
 final readonly class BlogController
 {
-    /** @param array{name: string, description: string, author: string, base_url: string, articles_per_page: int} $site */
+    /** @param array{name: string, description: string, author: string, base_url: string, articles_per_page: int, social: array{linkedin: ?string, github: ?string, instagram: ?string}} $site */
     public function __construct(
         private array $site,
         private ArticleIndex $index,
@@ -36,6 +36,18 @@ final readonly class BlogController
             $page,
             '/tags/' . $tagSlug,
         );
+    }
+
+    public function tags(): Response
+    {
+        $tags = $this->index->tags();
+
+        return new Response(200, $this->templates->page('Todos os assuntos', 'pages/tags', [
+            'description' => 'Todos os assuntos publicados por ' . $this->site['author']
+                . ' no ' . $this->site['name'] . '.',
+            'path' => '/tags',
+            'tags' => $tags,
+        ]));
     }
 
     public function article(string $slug): Response
@@ -77,7 +89,10 @@ final readonly class BlogController
 
     public function sitemap(): Response
     {
-        $urls = [['url' => $this->absoluteUrl('/')]];
+        $urls = [
+            ['url' => $this->absoluteUrl('/')],
+            ['url' => $this->absoluteUrl('/tags')],
+        ];
         foreach ($this->index->articles() as $article) {
             $urls[] = [
                 'url' => $this->absoluteUrl('/artigos/' . $article['slug']),
@@ -130,7 +145,8 @@ final readonly class BlogController
     /** @param list<array{slug: string, title: string, date: string, description: string, keywords: list<string>, tags: list<string>}> $articles */
     private function listing(array $articles, string $heading, int $page, string $basePath): Response
     {
-        $totalPages = max(1, (int) ceil(count($articles) / $this->site['articles_per_page']));
+        $articleCount = count($articles);
+        $totalPages = max(1, (int) ceil($articleCount / $this->site['articles_per_page']));
         if ($page > $totalPages) {
             return $this->notFound();
         }
@@ -149,17 +165,26 @@ final readonly class BlogController
             $description .= ' Página ' . $page . '.';
         }
 
+        $activeTag = $basePath === '/' ? null : substr($basePath, strlen('/tags/'));
+        $availableTags = $this->index->tags();
+        $featuredTags = $this->index->featuredTags();
+        if ($activeTag !== null && isset($availableTags[$activeTag]) && !isset($featuredTags[$activeTag])) {
+            $featuredTags[$activeTag] = $availableTags[$activeTag];
+        }
+
         return new Response(200, $this->templates->page($title, 'pages/listing', [
             'articles' => $visibleArticles,
             'description' => $description,
             'heading' => $heading,
             'path' => $this->pageUrl($basePath, $page),
             'isHome' => $basePath === '/' && $page === 1,
-            'activeTag' => $basePath === '/' ? null : substr($basePath, strlen('/tags/')),
-            'availableTags' => $this->index->tags(),
+            'activeTag' => $activeTag,
+            'articleCount' => $articleCount,
+            'featuredTags' => $featuredTags,
             'nextUrl' => $page < $totalPages ? $this->pageUrl($basePath, $page + 1) : null,
             'page' => $page,
             'previousUrl' => $page > 1 ? $this->pageUrl($basePath, $page - 1) : null,
+            'tagCount' => count($availableTags),
             'totalPages' => $totalPages,
         ]));
     }

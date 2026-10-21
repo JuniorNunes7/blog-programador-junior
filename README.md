@@ -119,4 +119,4 @@ npm run test:front:container
 git diff --check
 ```
 
-A URL pública de SEO vem de `BLOG_BASE_URL` no ambiente do processo PHP (ou de `config/site.php`). Defina o domínio real antes do deploy; `.env.example` é apenas uma referência e arquivos `.env` não são carregados automaticamente. `BLOG_AUTHOR` segue a mesma regra.
+A URL pública de SEO vem de `BLOG_BASE_URL` no ambiente do processo PHP (ou de `config/site.php`). Os links opcionais do rodapé usam `BLOG_LINKEDIN_URL`, `BLOG_GITHUB_URL` e `BLOG_INSTAGRAM_URL`; um valor ausente mantém a respectiva rede oculta. O bootstrap carrega `.env` quando ele existe, mas variáveis já definidas pelo servidor têm prioridade. Reinicie o processo PHP depois de editar o arquivo. Defina o domínio e as URLs reais antes do deploy. `BLOG_AUTHOR` segue a mesma regra.
