@@ -63,7 +63,7 @@ composer install --no-dev --optimize-autoloader
 BLOG_BASE_URL=https://seu-dominio.example composer build
 ```
 
-Publique **somente o conteúdo de `dist/`**, incluindo `.htaccess`, e configure o `DocumentRoot` para essa cópia publicada. A publicação precisa substituir a versão anterior, removendo arquivos que não estão no novo artefato; apenas sobrepor arquivos pode manter artigos excluídos acessíveis. A publicação permanece manual. Não envie `content/`, `templates/`, `src/`, `vendor/`, `.env` ou `storage/`.
+Publique **somente o conteúdo de `dist/`**, incluindo `.htaccess`, e configure o `DocumentRoot` para essa cópia publicada. A publicação precisa remover arquivos que não estão no novo artefato; apenas sobrepor arquivos pode manter artigos excluídos acessíveis. O workflow do GitHub Actions publica automaticamente depois que as verificações passam em um `push` para `main` (incluindo merges), sincronizando `dist/` com `rsync --delete-delay`. Antes do build, ele copia `.env.example` para `.env`, usando os valores de produção definidos nesse arquivo. Configure os secrets `SSH_PRIVATE_KEY` (chave privada autorizada no servidor) e `SSH_KNOWN_HOSTS` (chave de host verificada de `juniornunes.dev`). O workflow publica em `/home/junior/blog.juniornunes.dev`. Não envie `content/`, `templates/`, `src/`, `vendor/`, `.env` ou `storage/`.
 
 O `.htaccess` resolve URLs sem extensão para HTML existente, normaliza os aliases `.html`, barra final e página 1, e entrega a página personalizada com status 404 em caminhos inexistentes. A configuração do virtual host deve permitir essas diretivas (por exemplo, `AllowOverride All` limitado ao diretório publicado). Outro servidor estático precisa de regras equivalentes: `.htaccess` é específico do Apache.
 
