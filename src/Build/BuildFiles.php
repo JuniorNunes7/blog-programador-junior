@@ -13,8 +13,14 @@ final class BuildFiles
 {
     public static function directory(string $path): void
     {
-        if (!is_dir($path) && !@mkdir($path, 0775, true) && !is_dir($path)) {
-            throw new RuntimeException('Não foi possível criar o diretório: ' . $path);
+
+        if (
+            !is_dir($path) && !@mkdir($path, 0775, true) &&
+            !is_dir($path)
+        ) {
+            throw new RuntimeException(
+                'Não foi possível criar o diretório: ' . $path
+            );
         }
     }
 
@@ -22,7 +28,9 @@ final class BuildFiles
     public static function inventory(string $directory): array
     {
         if (!is_dir($directory)) {
-            throw new RuntimeException('Diretório não encontrado: ' . $directory);
+            throw new RuntimeException(
+                'Diretório não encontrado: ' . $directory
+            );
         }
 
         $files = [];

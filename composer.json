@@ -26,8 +26,8 @@
     "build:index": "php bin/build-index.php",
     "test": "phpunit",
     "test:apache": "python3 bin/test-apache.py",
-    "lint": "phpcs --standard=PSR12 bin config src tests",
-    "lint:fix": "phpcbf --standard=PSR12 bin config src tests"
+    "lint": "phpcs",
+    "lint:fix": "phpcbf"
   },
   "config": {
     "sort-packages": true
