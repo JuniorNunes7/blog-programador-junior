@@ -81,4 +81,7 @@ $application = new BlogApplication(new BlogController(
     ),
     new TemplateRenderer($root . '/templates', $site),
 ));
-$application->handle($_SERVER['REQUEST_METHOD'], $empty || $single || $withSocial ? '/' : $_SERVER['REQUEST_URI'])->send();
+$application->handle(
+    $_SERVER['REQUEST_METHOD'],
+    $empty || $single || $withSocial ? '/' : $_SERVER['REQUEST_URI']
+)->send();
