@@ -130,7 +130,7 @@ select {
 
 main.site-shell {
     min-height: 60vh;
-    padding-block: clamp(2rem, 5vw, 4.5rem);
+    padding-block: clamp(2rem, 4vw, 3rem);
 }
 
 .skip-link {

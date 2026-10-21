@@ -145,7 +145,8 @@ final readonly class BlogController
     /** @param list<array{slug: string, title: string, date: string, description: string, keywords: list<string>, tags: list<string>}> $articles */
     private function listing(array $articles, string $heading, int $page, string $basePath): Response
     {
-        $totalPages = max(1, (int) ceil(count($articles) / $this->site['articles_per_page']));
+        $articleCount = count($articles);
+        $totalPages = max(1, (int) ceil($articleCount / $this->site['articles_per_page']));
         if ($page > $totalPages) {
             return $this->notFound();
         }
@@ -178,6 +179,7 @@ final readonly class BlogController
             'path' => $this->pageUrl($basePath, $page),
             'isHome' => $basePath === '/' && $page === 1,
             'activeTag' => $activeTag,
+            'articleCount' => $articleCount,
             'featuredTags' => $featuredTags,
             'nextUrl' => $page < $totalPages ? $this->pageUrl($basePath, $page + 1) : null,
             'page' => $page,
