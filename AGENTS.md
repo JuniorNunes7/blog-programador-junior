@@ -11,6 +11,6 @@ Não duplique essas diretrizes em novos documentos ou respostas: mantenha cada a
 ## Alterações no projeto
 
 - Artigos vivem em `content/articles/` e precisam respeitar o front matter descrito no [README](README.md).
-- Depois de alterar artigos, gere o índice com `composer build:index`.
+- Depois de alterar artigos, templates, configuração ou assets, gere o site com `composer build`.
 - Para alterações em PHP, execute `composer test` e `composer lint` quando forem pertinentes.
 - Preserve o site sem banco de dados e não introduza um CMS ou dependências de execução sem solicitação explícita.

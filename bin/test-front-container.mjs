@@ -8,7 +8,7 @@ import os from 'node:os';
 const image = 'mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf';
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const log = createWriteStream(path.join(os.tmpdir(), 'pj-front-container-server.log'));
-const server = spawn('php', ['-S', '127.0.0.1:8765', '-t', 'public', 'tests/Front/server.php'], {
+const server = spawn(process.execPath, ['tests/Front/start-server.mjs'], {
     cwd: root, stdio: ['ignore', 'ignore', 'pipe'],
 });
 server.stderr.pipe(log);
@@ -25,7 +25,7 @@ process.on('SIGTERM', stop);
 try {
     let ready = false;
     for (let attempt = 0; attempt < 30; attempt++) {
-        if (server.exitCode !== null) throw new Error('PHP server exited; inspect /tmp/pj-front-container-server.log');
+        if (server.exitCode !== null) throw new Error('Fixture server exited; inspect /tmp/pj-front-container-server.log');
         try {
             ready = (await fetch('http://127.0.0.1:8765')).ok;
         } catch { /* Wait for the server to bind its port. */ }

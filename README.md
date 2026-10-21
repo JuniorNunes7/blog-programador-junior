@@ -1,17 +1,21 @@
 # Programador Junior
 
-Blog editorial em PHP, orientado por artigos Markdown e sem CMS. A aplicação não usa banco de dados: os textos ficam em `content/articles/` e um índice JSON é gerado durante a publicação.
+Blog editorial estático, gerado por PHP a partir de artigos Markdown e templates. Os textos ficam em `content/articles/`; `composer build` produz o site completo em `dist/`. A hospedagem entrega arquivos prontos, sem PHP, Composer, banco de dados ou CMS.
 
 ## Requisitos
 
+Para gerar o site:
+
 - PHP 8.5+
 - Composer 2+
+
+Para hospedar: Apache 2.4 com `mod_rewrite`, `mod_dir`, `mod_mime` e `mod_headers`, permitindo as diretivas do `.htaccess`. PHP não é necessário na hospedagem.
 
 ## Instalação local
 
 ```bash
 composer install
-php bin/build-index.php
+composer build
 ```
 
 ## Escrevendo um artigo
@@ -33,17 +37,41 @@ tags:
 # Conteúdo do artigo
 ```
 
-Depois de criar ou alterar artigos, execute `php bin/build-index.php`. O comando valida todos os arquivos e só substitui `storage/article-index.json` depois de gerar um resultado válido.
+Depois de criar ou alterar artigos, execute `composer build`. O nome do arquivo continua definindo a URL, por exemplo `/artigos/ola-mundo`. Somente os arquivos `.md` diretamente em `content/articles/` são artigos; README e outros documentos não são publicados.
+
+## Geração incremental
+
+```sh
+composer build
+composer build -- --full
+```
+
+O comando calcula SHA-256 dos artigos e das entradas globais. Artigos novos ou alterados são validados e renderizados; artigos intactos reaproveitam o HTML anterior. Qualquer inclusão, alteração, exclusão ou renomeação atualiza home, tags, paginações, sitemap e RSS. Páginas que deixam de existir são removidas da saída. Templates, código, dependências, configuração efetiva e assets alterados provocam reconstrução completa.
+
+O manifesto privado `storage/build-manifest.json` guarda hashes, metadados dos artigos e o inventário da saída. Configurações de ambiente entram somente no hash global. Sem mudanças e com a saída íntegra, nenhum arquivo do site ou manifesto é reescrito. Manifesto ausente/inválido ou saída ausente/alterada provoca reconstrução completa. `--full` força esse comportamento.
+
+O build usa um lock para impedir execuções simultâneas, prepara e verifica o resultado em uma pasta temporária e depois substitui `dist/`. Falhas de validação ou preparação preservam o build anterior; falhas na troca restauram a versão anterior quando possível. Se uma interrupção deixar somente `dist.previous/`, o próximo build a recupera. Não execute a geração dentro da pasta servida em produção: a troca local de diretórios não é um mecanismo de deploy sem interrupção.
+
+`dist/` e o manifesto são descartáveis, ignorados pelo Git e não devem receber edições manuais. Os assets de origem continuam versionados em `public/assets/`. O comando legado `composer build:index` permanece disponível para gerar `storage/article-index.json`, mas não é requisito para o site estático.
 
 ## Publicação em Apache
 
-Configure o `DocumentRoot` do virtual host para a pasta `public/`. O arquivo `.htaccess` já encaminha URLs amigáveis ao front controller e mantém arquivos estáticos fora dessa regra. Antes do deploy, defina a URL pública final em `config/site.php`, execute `composer install --no-dev --optimize-autoloader` e depois `php bin/build-index.php`.
+Gere o site fora da pasta atendida pela hospedagem, com a configuração de produção:
 
-O site disponibiliza `/sitemap.xml`, `/feed.xml` e `/robots.txt` automaticamente. Artigos recebem URL canônica, metatags de compartilhamento, JSON-LD `BlogPosting`, `ETag` e `Last-Modified`.
+```sh
+composer install --no-dev --optimize-autoloader
+BLOG_BASE_URL=https://seu-dominio.example composer build
+```
+
+Publique **somente o conteúdo de `dist/`**, incluindo `.htaccess`, e configure o `DocumentRoot` para essa cópia publicada. A publicação precisa substituir a versão anterior, removendo arquivos que não estão no novo artefato; apenas sobrepor arquivos pode manter artigos excluídos acessíveis. A publicação permanece manual. Não envie `content/`, `templates/`, `src/`, `vendor/`, `.env` ou `storage/`.
+
+O `.htaccess` resolve URLs sem extensão para HTML existente, normaliza os aliases `.html`, barra final e página 1, e entrega a página personalizada com status 404 em caminhos inexistentes. A configuração do virtual host deve permitir essas diretivas (por exemplo, `AllowOverride All` limitado ao diretório publicado). Outro servidor estático precisa de regras equivalentes: `.htaccess` é específico do Apache.
+
+O artefato inclui `/sitemap.xml`, `/feed.xml` e `/robots.txt`. Artigos preservam URL canônica, metatags de compartilhamento e JSON-LD `BlogPosting`. Apache fornece `ETag` e `Last-Modified` dos arquivos gerados; o cache de HTML é de cinco minutos, XML/texto de uma hora e os assets mantêm a política definida no `.htaccess`.
 
 ## Front e desenvolvimento
 
-As decisões visuais ficam nas [diretrizes de marca](docs/design/BRAND.md), e o conteúdo segue o [guia editorial](docs/EDITORIAL.md). O HTML é renderizado no servidor; navegação e leitura funcionam sem JavaScript. O JavaScript aplica e persiste apenas a preferência de tema.
+As decisões visuais ficam nas [diretrizes de marca](docs/design/BRAND.md), e o conteúdo segue o [guia editorial](docs/EDITORIAL.md). O HTML é renderizado durante o build; navegação e leitura funcionam sem JavaScript. O JavaScript aplica e persiste apenas a preferência de tema.
 
 - `templates/components/`: marca, cabeçalho, rodapé, head/SEO, temas, cards, tags, metadados e paginação.
 - `templates/pages/`: composição de listagens, artigo e página não encontrada.
@@ -52,13 +80,15 @@ As decisões visuais ficam nas [diretrizes de marca](docs/design/BRAND.md), e o 
 - `src/Web/ArticleRenderer.php`: apresentação do Markdown, títulos, imagens locais e blocos roláveis acessíveis.
 - `resources/`: matrizes de imagens, fontes licenciadas e tipografia vetorial usada nas exportações. Não publicar essa pasta como DocumentRoot.
 
-Para iniciar o site localmente depois de gerar o índice:
+Para visualizar o site localmente depois de gerar `dist/`:
 
 ```sh
-php -S 127.0.0.1:8000 -t public bin/serve.php
+php -S 127.0.0.1:8000 -t dist bin/serve.php
 ```
 
-Node 24 e npm são necessários somente para desenvolvimento. Não há bundler, framework de front ou processo Node em produção. Os arquivos públicos gerados ficam versionados.
+A prévia local apenas lê os arquivos gerados; alterações exigem novo `composer build`. Ela não substitui a validação do `.htaccess` em Apache.
+
+Node 24 e npm são necessários somente para desenvolvimento. Não há bundler, framework de front ou processo Node em produção. As variantes de assets ficam versionadas; o site montado em `dist/` não fica.
 
 ```sh
 npm ci
@@ -92,7 +122,7 @@ npx playwright install --with-deps chromium firefox webkit
 npm run test:front -- --project=chromium --project=firefox --project=webkit
 ```
 
-A suíte inicia um servidor PHP de fixtures na porta 8765. Seus artigos e índices são criados no diretório temporário do sistema, sem alterar `content/articles/` ou o índice real. A rota `/__empty` existe somente nesse servidor de testes.
+A suíte gera sites de fixtures no diretório temporário do sistema antes de iniciar o servidor na porta 8765. O servidor apenas entrega os arquivos estáticos, sem renderizar artigos por requisição e sem alterar o conteúdo ou a saída reais. As rotas `/__empty`, `/__single` e `/__with-social` existem somente nessas fixtures.
 
 As capturas de referência são geradas com Chromium no container oficial Playwright 1.64.1 / Ubuntu Noble, fixado por digest. Para reproduzir exatamente a CI, use Linux com Docker disponível e a porta 8765 livre:
 
@@ -115,8 +145,12 @@ Antes de entregar alterações:
 ```sh
 composer test
 composer lint
+composer build
+composer test:apache
 npm run test:front:container
 git diff --check
 ```
 
-A URL pública de SEO vem de `BLOG_BASE_URL` no ambiente do processo PHP (ou de `config/site.php`). Os links opcionais do rodapé usam `BLOG_LINKEDIN_URL`, `BLOG_GITHUB_URL` e `BLOG_INSTAGRAM_URL`; um valor ausente mantém a respectiva rede oculta. O bootstrap carrega `.env` quando ele existe, mas variáveis já definidas pelo servidor têm prioridade. Reinicie o processo PHP depois de editar o arquivo. Defina o domínio e as URLs reais antes do deploy. `BLOG_AUTHOR` segue a mesma regra.
+`composer test:apache` requer Python 3 e Apache 2.4 locais (pacote `apache2` no Ubuntu ou `httpd` no Fedora). Ele gera fixtures e inicia uma instância isolada, em porta temporária, carregando apenas módulos de entrega estática. Valida URLs, redirects, 404, paginação, MIME types, cache e GET/HEAD sem PHP no servidor. A CI executa essa validação além dos testes PHP e de front.
+
+A URL pública de SEO vem de `BLOG_BASE_URL` no ambiente do processo de build (ou de `config/site.php`). Os links opcionais do rodapé usam `BLOG_LINKEDIN_URL`, `BLOG_GITHUB_URL` e `BLOG_INSTAGRAM_URL`; um valor ausente mantém a respectiva rede oculta. O bootstrap carrega `.env` quando ele existe, mas variáveis já definidas no ambiente têm prioridade. Execute `composer build` e publique novamente depois de editar a configuração. Defina o domínio e as URLs reais antes do deploy. `BLOG_AUTHOR` segue a mesma regra.
