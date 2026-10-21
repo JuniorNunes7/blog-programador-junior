@@ -1,20 +1,26 @@
-const picker = document.querySelector('.theme-picker');
-const select = picker?.querySelector('select');
+const toggle = document.querySelector('.theme-toggle');
 const root = document.documentElement;
 const system = matchMedia('(prefers-color-scheme: dark)');
 
 function applyTheme(preference) {
     root.dataset.themePreference = preference;
     root.dataset.theme = preference === 'system' ? (system.matches ? 'dark' : 'light') : preference;
-    if (select) select.value = preference;
+    if (toggle) {
+        const isDark = root.dataset.theme === 'dark';
+        toggle.setAttribute('aria-pressed', String(isDark));
+        toggle.setAttribute('aria-label', isDark
+            ? 'Tema escuro. Alternar para tema claro.'
+            : 'Tema claro. Alternar para tema escuro.');
+    }
 }
 
-if (select) {
+if (toggle) {
     applyTheme(root.dataset.themePreference || 'system');
-    picker.hidden = false;
-    select.addEventListener('change', () => {
-        applyTheme(select.value);
-        try { localStorage.setItem('pj-theme', select.value); } catch { /* Keep the selection for this page. */ }
+    toggle.hidden = false;
+    toggle.addEventListener('click', () => {
+        const preference = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        applyTheme(preference);
+        try { localStorage.setItem('pj-theme', preference); } catch { /* Keep the selection for this page. */ }
     });
     system.addEventListener('change', () => {
         if (root.dataset.themePreference === 'system') applyTheme('system');

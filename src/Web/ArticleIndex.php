@@ -71,6 +71,20 @@ final readonly class ArticleIndex
         return $tags;
     }
 
+    /** @return array<string, array{name: string, count: int}> */
+    public function featuredTags(int $limit = 6): array
+    {
+        $tags = $this->tags();
+
+        uasort($tags, static function (array $first, array $second): int {
+            $byCount = $second['count'] <=> $first['count'];
+
+            return $byCount !== 0 ? $byCount : strcasecmp($first['name'], $second['name']);
+        });
+
+        return array_slice($tags, 0, $limit, true);
+    }
+
     /** @return list<array{slug: string, title: string, date: string, description: string, keywords: list<string>, tags: list<string>}> */
     public function forTag(string $tagSlug): array
     {

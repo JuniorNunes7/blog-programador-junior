@@ -43,6 +43,10 @@ final readonly class BlogApplication
             return $this->controller->robots();
         }
 
+        if ($path === '/tags') {
+            return $this->controller->tags();
+        }
+
         $tagRoute = '#^/tags/(?<tag>[a-z0-9]+(?:-[a-z0-9]+)*)'
             . '(?:/pagina/(?<page>[1-9][0-9]*))?$#';
         if (preg_match($tagRoute, $path, $matches) === 1) {

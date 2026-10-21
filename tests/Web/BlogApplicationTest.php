@@ -87,6 +87,44 @@ MARKDOWN);
         );
     }
 
+    public function testItListsEveryTagWithCountsAndAStableCanonicalUrl(): void
+    {
+        $response = $this->application()->handle('GET', '/tags');
+
+        self::assertSame(200, $response->status);
+        self::assertStringContainsString('<h1>Todos os assuntos</h1>', $response->body);
+        self::assertStringContainsString('PHP</span><span class="topic-count">1 artigo</span>', $response->body);
+        self::assertStringContainsString(
+            '<link rel="canonical" href="https://example.test/tags">',
+            $response->body,
+        );
+    }
+
+    public function testItPrioritizesFrequentTagsAndPreservesAnActiveTagOutsideTheLimit(): void
+    {
+        $path = $this->directory . '/index.json';
+        $data = json_decode(file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+        foreach (['PHP', 'Arquitetura', 'Testes', 'Carreira', 'Docker', 'Linux', 'Laravel'] as $number => $tag) {
+            $data['articles'][] = [
+                'slug' => 'artigo-' . $number,
+                'title' => 'Artigo ' . $number,
+                'date' => '2026-10-17',
+                'description' => 'Descrição',
+                'keywords' => ['php'],
+                'tags' => [$tag],
+            ];
+        }
+        file_put_contents($path, json_encode($data, JSON_THROW_ON_ERROR));
+
+        $index = ArticleIndex::fromFile($path);
+
+        self::assertSame(
+            ['php', 'arquitetura', 'carreira', 'docker', 'laravel', 'linux'],
+            array_keys($index->featuredTags()),
+        );
+        self::assertStringContainsString('>Testes</a>', $this->application()->handle('GET', '/tags/testes')->body);
+    }
+
     public function testItReturnsNotFoundForUnknownRoutes(): void
     {
         $response = $this->application()->handle('GET', '/artigos/nao-existe');
@@ -107,6 +145,7 @@ MARKDOWN);
             '<loc>https://example.test/artigos/um-artigo</loc>',
             $sitemap->body,
         );
+        self::assertStringContainsString('<loc>https://example.test/tags</loc>', $sitemap->body);
         self::assertStringContainsString(
             '<guid isPermaLink="true">https://example.test/artigos/um-artigo</guid>',
             $feed->body,
@@ -170,6 +209,19 @@ MARKDOWN);
         self::assertNotSame($first->headers['ETag'], $second->headers['ETag']);
     }
 
+    public function testItRendersOnlyConfiguredSocialLinks(): void
+    {
+        $response = $this->application(['social' => [
+            'linkedin' => 'https://www.linkedin.com/in/autor',
+            'github' => null,
+            'instagram' => 'https://www.instagram.com/autor',
+        ]])->handle('GET', '/');
+
+        self::assertStringContainsString('href="https://www.linkedin.com/in/autor"', $response->body);
+        self::assertStringContainsString('href="https://www.instagram.com/autor"', $response->body);
+        self::assertStringNotContainsString('GitHub de Autor', $response->body);
+    }
+
     public function testArticleImagesAndScrollableBlocksAreAccessibleWithoutJavascript(): void
     {
         $path = $this->directory . '/articles/um-artigo.md';
@@ -205,6 +257,7 @@ MARKDOWN);
             'author' => 'Autor',
             'base_url' => 'https://example.test',
             'articles_per_page' => 10,
+            'social' => ['linkedin' => null, 'github' => null, 'instagram' => null],
         ], $overrides);
 
         return new BlogApplication(
