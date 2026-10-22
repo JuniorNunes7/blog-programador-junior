@@ -1,0 +1,35 @@
+name: Markdown
+on:
+  workflow_call:
+    inputs:
+      articles:
+        required: true
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Validar Markdown alterado
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: npm run lint:markdown -- --diff "$PR_BASE" "$PR_HEAD"
+      - uses: shivammathur/setup-php@v2
+        if: inputs.articles
+        with:
+          php-version: '8.5'
+          coverage: none
+      - if: inputs.articles
+        run: composer install --no-interaction --prefer-dist
+      - if: inputs.articles
+        run: composer build
