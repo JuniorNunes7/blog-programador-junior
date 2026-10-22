@@ -13,6 +13,12 @@ final readonly class ArticleIndex
     {
     }
 
+    /** @param list<array{slug: string, title: string, date: string, description: string, keywords: list<string>, tags: list<string>}> $articles */
+    public static function fromArticles(array $articles): self
+    {
+        return new self($articles);
+    }
+
     public static function fromFile(string $path): self
     {
         $contents = file_get_contents($path);

@@ -2,6 +2,12 @@
 /.phpunit.cache/
 /.phpunit.result.cache
 /storage/article-index.json
+/storage/build-manifest.json
+/storage/build.lock
+/storage/build-manifest-*
+/dist/
+/dist.build-*/
+/dist.previous/
 /.DS_Store
 /.env
 /node_modules/

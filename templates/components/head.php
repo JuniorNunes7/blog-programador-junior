@@ -3,13 +3,13 @@
 <meta name="color-scheme" content="light dark">
 <title><?= $this->escape($title . ' · ' . $site['name']) ?></title>
 <meta name="description" content="<?= $this->escape($description) ?>">
-<?php if ($noindex): ?>
+<?php if ($noindex) : ?>
 <meta name="robots" content="noindex, follow">
-<?php else: ?>
+<?php else : ?>
 <link rel="canonical" href="<?= $this->escape($canonicalUrl) ?>">
 <meta property="og:url" content="<?= $this->escape($canonicalUrl) ?>">
 <?php endif; ?>
-<?php if ($article !== null): ?>
+<?php if ($article !== null) : ?>
 <meta name="keywords" content="<?= $this->escape(implode(', ', $article->metadata->keywords)) ?>">
 <meta property="article:published_time" content="<?= $this->escape($article->metadata->publishedAt->format(DATE_ATOM)) ?>">
 <?php endif; ?>
@@ -27,7 +27,7 @@
 <meta name="twitter:description" content="<?= $this->escape($description) ?>">
 <meta name="twitter:image" content="<?= $this->escape($this->absoluteUrl($this->asset('/assets/brand/banner-light.png'))) ?>">
 <meta name="twitter:image:alt" content="Programador Junior. Menos ego. Mais aprendizado.">
-<?php if (!$noindex): ?>
+<?php if (!$noindex) : ?>
 <script type="application/ld+json"><?= $schemaJson ?></script>
 <?php endif; ?>
 <link rel="alternate" type="application/rss+xml" title="Programador Junior — RSS" href="/feed.xml">
@@ -37,7 +37,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="<?= $this->asset('/assets/brand/apple-touch-icon.png') ?>">
 <script src="<?= $this->asset('/assets/js/theme-init.js') ?>"></script>
 <link rel="preload" href="/assets/fonts/source-sans-3-400.woff2" as="font" type="font/woff2" crossorigin>
-<?php foreach (['tokens', 'base', 'components', 'pages/' . $pageStyle] as $stylesheet): ?>
+<?php foreach (['tokens', 'base', 'components', 'pages/' . $pageStyle] as $stylesheet) : ?>
 <link rel="stylesheet" href="<?= $this->asset('/assets/css/' . $stylesheet . '.css') ?>">
 <?php endforeach; ?>
 <script type="module" src="<?= $this->asset('/assets/js/theme.js') ?>"></script>

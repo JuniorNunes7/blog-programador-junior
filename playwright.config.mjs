@@ -9,9 +9,9 @@ export default defineConfig({
     reporter: [['list'], ['html', { open: 'never' }]],
     use: { baseURL: 'http://127.0.0.1:8765', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
     webServer: process.env.PLAYWRIGHT_EXTERNAL_SERVER ? undefined : {
-        command: 'php -S 127.0.0.1:8765 -t public tests/Front/server.php 2>/tmp/pj-front-server.log',
+        command: 'node tests/Front/start-server.mjs 2>/tmp/pj-front-server.log',
         url: 'http://127.0.0.1:8765',
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
     },
     projects: [
         { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /visual\.spec/ },

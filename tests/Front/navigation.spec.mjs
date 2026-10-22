@@ -18,7 +18,9 @@ test('article, tags, pagination and recovery are real links', async ({ page }) =
     await page.getByRole('link', { name: /Todos os assuntos/ }).click();
     await expect(page).toHaveURL(/\/tags$/);
     await expect(page.getByRole('heading', { name: 'Todos os assuntos' })).toBeVisible();
-    expect((await page.goto('/nao-existe')).status()).toBe(404);
+    for (const route of ['/nao-existe', '/404', '/404.html', '/.htaccess']) {
+        expect((await page.goto(route)).status()).toBe(404);
+    }
     await page.getByRole('link', { name: /Voltar para os artigos/ }).click();
     await expect(page).toHaveURL('/');
 });

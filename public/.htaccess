@@ -1,13 +1,59 @@
-Options -Indexes
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+DirectorySlash Off
+ErrorDocument 404 /404.html
+
+AddDefaultCharset UTF-8
+AddType text/html .html
+AddType application/xml .xml
+AddType text/plain .txt
+AddType text/css .css
+AddType application/javascript .js
+AddType image/svg+xml .svg
+AddType image/webp .webp
+AddType font/woff2 .woff2
+<Files "feed.xml">
+    ForceType application/rss+xml
+</Files>
+
 RewriteEngine On
 
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+# Keep internal configuration private and preserve 404 even on direct access.
+RewriteRule (^|/)\. - [R=404,END]
+RewriteCond %{ENV:REDIRECT_STATUS} !=404
+RewriteRule ^404(?:\.html)?/?$ - [R=404,END]
 
-RewriteRule ^ index.php [QSA,L]
+# Canonical URLs keep the same extensionless paths as the original blog.
+RewriteCond %{THE_REQUEST} "\s/+index\.html[?\s]" [NC]
+RewriteRule ^index\.html$ / [R=301,END]
+
+RewriteCond %{THE_REQUEST} "\s/+[^?\ ]+\.html[?\s]" [NC]
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^(?!404\.html$)(.+)\.html$ /$1 [R=301,END]
+
+RewriteRule ^pagina/1/?$ / [R=301,END]
+RewriteCond %{DOCUMENT_ROOT}/tags/$1.html -f
+RewriteRule ^tags/([a-z0-9-]+)/pagina/1/?$ /tags/$1 [R=301,END]
+
+RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+RewriteRule ^(.+)/$ /$1 [R=301,END]
+
+# Resolve HTML before directories: /tags and /tags/php also have child pages.
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.+)$ $1.html [END]
+
+RewriteRule ^$ index.html [END]
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [END]
+RewriteRule ^ - [R=404,END]
 
 <IfModule mod_headers.c>
+    <FilesMatch "\.html$">
+        Header set Cache-Control "public, max-age=300"
+    </FilesMatch>
+    <FilesMatch "\.(?:xml|txt)$">
+        Header set Cache-Control "public, max-age=3600"
+    </FilesMatch>
     <FilesMatch "\.(?:css|js|svg|png|jpe?g|webp|avif)$">
         Header set Cache-Control "public, max-age=604800, immutable"
     </FilesMatch>
