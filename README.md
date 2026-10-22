@@ -63,7 +63,7 @@ composer install --no-dev --optimize-autoloader
 BLOG_BASE_URL=https://seu-dominio.example composer build
 ```
 
-Publique **somente o conteúdo de `dist/`**, incluindo `.htaccess`, e configure o `DocumentRoot` para essa cópia publicada. A publicação precisa remover arquivos que não estão no novo artefato; apenas sobrepor arquivos pode manter artigos excluídos acessíveis. O workflow do GitHub Actions publica automaticamente depois que as verificações passam em um `push` para `main` (incluindo merges), sincronizando `dist/` com `rsync --delete-delay`. Antes do build, ele copia `.env.example` para `.env`, usando os valores de produção definidos nesse arquivo. Configure os secrets `SSH_PRIVATE_KEY` (chave privada autorizada no servidor) e `SSH_KNOWN_HOSTS` (chave de host verificada de `juniornunes.dev`). O workflow publica em `/home/junior/blog.juniornunes.dev`. Não envie `content/`, `templates/`, `src/`, `vendor/`, `.env` ou `storage/`.
+Publique **somente o conteúdo de `dist/`**, incluindo `.htaccess`, e configure o `DocumentRoot` para essa cópia publicada. A publicação precisa remover arquivos que não estão no novo artefato; apenas sobrepor arquivos pode manter artigos excluídos acessíveis. O workflow `Checks` valida pull requests. Depois do merge, o workflow `Deploy` publica em um `push` para `main` (incluindo merges), sem repetir esses checks, sincronizando `dist/` com `rsync --delete-delay`. Antes do build, o deploy copia `.env.example` para `.env`, usando os valores de produção definidos nesse arquivo. Configure os secrets `SSH_PRIVATE_KEY` (chave privada autorizada no servidor) e `SSH_KNOWN_HOSTS` (chave de host verificada de `juniornunes.dev`). O workflow publica em `/home/junior/blog.juniornunes.dev`. Não envie `content/`, `templates/`, `src/`, `vendor/`, `.env` ou `storage/`.
 
 O `.htaccess` resolve URLs sem extensão para HTML existente, normaliza os aliases `.html`, barra final e página 1, e entrega a página personalizada com status 404 em caminhos inexistentes. A configuração do virtual host deve permitir essas diretivas (por exemplo, `AllowOverride All` limitado ao diretório publicado). Outro servidor estático precisa de regras equivalentes: `.htaccess` é específico do Apache.
 
@@ -113,6 +113,22 @@ npm run build:assets
 ```
 
 O pacote Python é uma ferramenta opcional de autoria, não uma dependência de instalação ou publicação do site.
+
+## Validação de Markdown no PR
+
+O workflow `Checks` começa identificando os arquivos alterados em relação à base do PR. Os jobs de PHP e front executam quando há mudanças em código, templates, assets, recursos, testes, scripts, dependências, configuração ou workflows. Arquivos `.md`, inclusive dentro dessas pastas, não acionam esses jobs.
+
+Quando há Markdown alterado, `Checks` chama o workflow reutilizável `Markdown`, definido em `.github/workflows/markdown.yml`, depois que PHP e front passam ou são pulados por ausência de mudanças de código. Falhas ou cancelamentos impedem essa chamada. O lint valida somente os `.md` alterados que ainda existem; alterações, exclusões e renomeações de artigos em `content/articles/` também executam `composer build` para validar o conteúdo e a geração do site. Um PR apenas de documentação executa o lint; um PR apenas de artigos executa lint e build.
+
+Para validar Markdown localmente, instale as dependências com `npm ci` e execute:
+
+```sh
+npm run lint:markdown
+npm run lint:markdown -- README.md content/articles/ola-mundo.md
+npm run lint:markdown -- --diff <sha-completo-da-base> <sha-completo-do-head>
+```
+
+Sem argumentos, o comando valida todos os `.md` versionados. A configuração em `.markdownlint.json` permite linhas longas, HTML e múltiplos títulos principais, reconhece front matter e não modifica os arquivos. As regras de autoria continuam no [guia editorial](docs/EDITORIAL.md).
 
 ## Testes de front
 

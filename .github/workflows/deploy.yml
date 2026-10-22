@@ -1,0 +1,40 @@
+name: Deploy
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: read
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+      - run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+      - name: Prepare production environment
+        run: cp .env.example .env
+      - run: composer build
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Sync dist to production
+        env:
+          SSH_TARGET: junior@juniornunes.dev
+          DEPLOY_DIR: /home/junior/blog.juniornunes.dev
+        run: |
+          rsync --archive --compress --delete-delay --delay-updates \
+            dist/ "$SSH_TARGET:$DEPLOY_DIR/"

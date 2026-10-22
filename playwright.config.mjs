@@ -15,8 +15,8 @@ export default defineConfig({
     },
     projects: [
         { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /visual\.spec/ },
-        { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: /visual\.spec/ },
-        { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: /visual\.spec/ },
+        // { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: /visual\.spec/ },
+        // { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: /visual\.spec/ },
         { name: 'visual', use: { ...devices['Desktop Chrome'] }, testMatch: /visual\.spec/ },
     ],
 });

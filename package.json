@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "lint:markdown": "node bin/lint-markdown.mjs",
     "build:assets": "node bin/build-assets.mjs",
     "test:front": "playwright test",
     "test:front:container": "node bin/test-front-container.mjs",
@@ -12,6 +13,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "1.64.1",
+    "markdownlint-cli2": "^0.24.0",
     "sharp": "^0.35.5"
   }
 }

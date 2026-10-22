@@ -1,11 +1,30 @@
-name: Checks and deploy
+name: Checks
 on:
-  push:
   pull_request:
 permissions:
   contents: read
 jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
+      markdown: ${{ steps.changes.outputs.markdown }}
+      articles: ${{ steps.changes.outputs.articles }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - id: changes
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: node bin/pr-changes.mjs "$PR_BASE" "$PR_HEAD"
   php:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -18,10 +37,11 @@ jobs:
       - run: composer test
       - run: composer lint
       - run: composer build
-      - run: composer build
       - run: sudo apt-get update && sudo apt-get install -y apache2
       - run: composer test:apache
   frontend:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -45,36 +65,13 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [php, frontend]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.5'
-          coverage: none
-      - run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-      - name: Prepare production environment
-        run: cp .env.example .env
-      - run: composer build
-      - name: Configure SSH
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-      - name: Sync dist to production
-        env:
-          SSH_TARGET: junior@juniornunes.dev
-          DEPLOY_DIR: /home/junior/blog.juniornunes.dev
-        run: |
-          rsync --archive --compress --delete-delay --delay-updates \
-            dist/ "$SSH_TARGET:$DEPLOY_DIR/"
+  markdown:
+    needs: [changes, php, frontend]
+    if: >-
+      ${{ !cancelled() && needs.changes.result == 'success' &&
+          needs.changes.outputs.markdown == 'true' &&
+          (needs.php.result == 'success' || needs.php.result == 'skipped') &&
+          (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') }}
+    uses: ./.github/workflows/markdown.yml
+    with:
+      articles: ${{ needs.changes.outputs.articles == 'true' }}
